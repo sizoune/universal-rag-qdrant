@@ -5,8 +5,11 @@ WORKDIR /app
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
+ENV PIP_DEFAULT_TIMEOUT=120
+ENV PIP_RETRIES=20
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --retries 20 --timeout 120 -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
