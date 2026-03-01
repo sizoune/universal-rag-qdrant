@@ -38,9 +38,9 @@ def test_strict_dimension_checking_passes(mock_get_embedder, mock_get_client):
     mock_get_client.return_value = mock_client
     mock_get_embedder.return_value = MagicMock()
 
-    # Mock matching dimension (1536 as mocked in conftest)
+    # Mock matching dimension
     mock_collection_info = MagicMock()
-    mock_collection_info.config.params.vectors.size = 1536
+    mock_collection_info.config.params.vectors.size = config.EMBEDDER_DIMENSION
     mock_client.get_collection.return_value = mock_collection_info
 
     vector_store = initialize_vector_store()
@@ -69,4 +69,4 @@ def test_collection_creation_on_not_found(mock_get_embedder, mock_get_client):
     mock_client.create_collection.assert_called_once()
     args, kwargs = mock_client.create_collection.call_args
     assert kwargs["collection_name"] == config.QDRANT_COLLECTION_NAME
-    assert kwargs["vectors_config"].size == 1536
+    assert kwargs["vectors_config"].size == config.EMBEDDER_DIMENSION

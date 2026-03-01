@@ -36,7 +36,8 @@ def test_config_handles_invalid_types():
 
 
 @patch.dict(os.environ, {}, clear=True)
-def test_config_handles_missing_vars():
+@patch("src.config.load_dotenv")
+def test_config_handles_missing_vars(mock_load_dotenv):
     import src.config
 
     importlib.reload(src.config)

@@ -28,4 +28,5 @@ def mock_env_vars():
     }
 
     with patch.dict(os.environ, env_vars, clear=True):
-        yield
+        with patch("dotenv.load_dotenv"):
+            yield
