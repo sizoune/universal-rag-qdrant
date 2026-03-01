@@ -4,7 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.chat_models import ChatOllama
+from langchain_ollama import ChatOllama
 from src.config import config
 import logging
 
@@ -15,24 +15,26 @@ chat_history = []
 
 
 def get_llm():
-    """Factory function for Chat LLMs (parallel to get_embedder)"""
-    base_url = config.EMBEDDER_BASE_URL
-    model_name = (
-        config.EMBEDDER_MODEL
-    )  # Defaulting to same, might need separate config in future
-    api_key = config.EMBEDDER_API_KEY
+    """Factory function for Chat LLMs using separate LLM_* config."""
+    base_url = config.LLM_BASE_URL
+    model_name = config.LLM_MODEL
+    api_key = config.LLM_API_KEY
 
-    # We will use simple heuristic to match the LLM provider
+    # Heuristic to determine LLM provider
     if base_url and "api.openai.com" in base_url:
-        return ChatOpenAI(
-            model="gpt-3.5-turbo", api_key=api_key
-        )  # Fixed standard model for chat
+        logger.info(f"Using OpenAI Chat with model {model_name}")
+        return ChatOpenAI(model=model_name, api_key=api_key)
     elif api_key and api_key.startswith("AIza"):
-        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
-    elif base_url and "ollama" in base_url.lower():
-        return ChatOllama(model="llama3", base_url=base_url)
+        logger.info(f"Using Google Gemini Chat with model {model_name}")
+        return ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
+    elif base_url and ("ollama" in base_url.lower() or ":11434" in base_url):
+        logger.info(f"Using Ollama Chat with model {model_name} at {base_url}")
+        return ChatOllama(model=model_name, base_url=base_url)
     elif base_url:
         # Generic OpenAI compatible
+        logger.info(
+            f"Using OpenAI Compatible Chat at {base_url} with model {model_name}"
+        )
         return ChatOpenAI(
             model=model_name,
             openai_api_key=api_key or "sk-dummy",
@@ -40,7 +42,8 @@ def get_llm():
         )
     else:
         # Default Fallback
-        return ChatOpenAI(model="gpt-3.5-turbo", api_key=api_key)
+        logger.info(f"Defaulting to OpenAI Chat with model {model_name}")
+        return ChatOpenAI(model=model_name, api_key=api_key)
 
 
 def get_chat_chain(vector_store):

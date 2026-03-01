@@ -105,10 +105,26 @@
     },
     {
         "label": "ChatOllama",
-        "importPath": "langchain_community.chat_models",
-        "description": "langchain_community.chat_models",
+        "importPath": "langchain_ollama",
+        "description": "langchain_ollama",
         "isExtraImport": true,
-        "detail": "langchain_community.chat_models",
+        "detail": "langchain_ollama",
+        "documentation": {}
+    },
+    {
+        "label": "OllamaEmbeddings",
+        "importPath": "langchain_ollama",
+        "description": "langchain_ollama",
+        "isExtraImport": true,
+        "detail": "langchain_ollama",
+        "documentation": {}
+    },
+    {
+        "label": "OllamaEmbeddings",
+        "importPath": "langchain_ollama",
+        "description": "langchain_ollama",
+        "isExtraImport": true,
+        "detail": "langchain_ollama",
         "documentation": {}
     },
     {
@@ -175,22 +191,6 @@
         "description": "dotenv",
         "isExtraImport": true,
         "detail": "dotenv",
-        "documentation": {}
-    },
-    {
-        "label": "OllamaEmbeddings",
-        "importPath": "langchain_ollama",
-        "description": "langchain_ollama",
-        "isExtraImport": true,
-        "detail": "langchain_ollama",
-        "documentation": {}
-    },
-    {
-        "label": "OllamaEmbeddings",
-        "importPath": "langchain_ollama",
-        "description": "langchain_ollama",
-        "isExtraImport": true,
-        "detail": "langchain_ollama",
         "documentation": {}
     },
     {
@@ -603,7 +603,7 @@
         "kind": 2,
         "importPath": "src.chat",
         "description": "src.chat",
-        "peekOfCode": "def get_llm():\n    \"\"\"Factory function for Chat LLMs (parallel to get_embedder)\"\"\"\n    base_url = config.EMBEDDER_BASE_URL\n    model_name = (\n        config.EMBEDDER_MODEL\n    )  # Defaulting to same, might need separate config in future\n    api_key = config.EMBEDDER_API_KEY\n    # We will use simple heuristic to match the LLM provider\n    if base_url and \"api.openai.com\" in base_url:\n        return ChatOpenAI(",
+        "peekOfCode": "def get_llm():\n    \"\"\"Factory function for Chat LLMs using separate LLM_* config.\"\"\"\n    base_url = config.LLM_BASE_URL\n    model_name = config.LLM_MODEL\n    api_key = config.LLM_API_KEY\n    # Heuristic to determine LLM provider\n    if base_url and \"api.openai.com\" in base_url:\n        logger.info(f\"Using OpenAI Chat with model {model_name}\")\n        return ChatOpenAI(model=model_name, api_key=api_key)\n    elif api_key and api_key.startswith(\"AIza\"):",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -630,7 +630,7 @@
         "kind": 5,
         "importPath": "src.chat",
         "description": "src.chat",
-        "peekOfCode": "logger = logging.getLogger(__name__)\n# Basic In-Memory Chat History\nchat_history = []\ndef get_llm():\n    \"\"\"Factory function for Chat LLMs (parallel to get_embedder)\"\"\"\n    base_url = config.EMBEDDER_BASE_URL\n    model_name = (\n        config.EMBEDDER_MODEL\n    )  # Defaulting to same, might need separate config in future\n    api_key = config.EMBEDDER_API_KEY",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n# Basic In-Memory Chat History\nchat_history = []\ndef get_llm():\n    \"\"\"Factory function for Chat LLMs using separate LLM_* config.\"\"\"\n    base_url = config.LLM_BASE_URL\n    model_name = config.LLM_MODEL\n    api_key = config.LLM_API_KEY\n    # Heuristic to determine LLM provider\n    if base_url and \"api.openai.com\" in base_url:",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -639,7 +639,7 @@
         "kind": 5,
         "importPath": "src.chat",
         "description": "src.chat",
-        "peekOfCode": "chat_history = []\ndef get_llm():\n    \"\"\"Factory function for Chat LLMs (parallel to get_embedder)\"\"\"\n    base_url = config.EMBEDDER_BASE_URL\n    model_name = (\n        config.EMBEDDER_MODEL\n    )  # Defaulting to same, might need separate config in future\n    api_key = config.EMBEDDER_API_KEY\n    # We will use simple heuristic to match the LLM provider\n    if base_url and \"api.openai.com\" in base_url:",
+        "peekOfCode": "chat_history = []\ndef get_llm():\n    \"\"\"Factory function for Chat LLMs using separate LLM_* config.\"\"\"\n    base_url = config.LLM_BASE_URL\n    model_name = config.LLM_MODEL\n    api_key = config.LLM_API_KEY\n    # Heuristic to determine LLM provider\n    if base_url and \"api.openai.com\" in base_url:\n        logger.info(f\"Using OpenAI Chat with model {model_name}\")\n        return ChatOpenAI(model=model_name, api_key=api_key)",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -648,7 +648,7 @@
         "kind": 6,
         "importPath": "src.config",
         "description": "src.config",
-        "peekOfCode": "class Config:\n    # Embedder Config\n    EMBEDDER_BASE_URL = os.getenv(\"EMBEDDER_BASE_URL\")\n    EMBEDDER_API_KEY = os.getenv(\"EMBEDDER_API_KEY\")\n    EMBEDDER_MODEL = os.getenv(\"EMBEDDER_MODEL\", \"text-embedding-3-small\")\n    try:\n        EMBEDDER_DIMENSION = int(os.getenv(\"EMBEDDER_DIMENSION\", \"1536\"))\n    except ValueError:\n        EMBEDDER_DIMENSION = 1536\n    # Qdrant Config",
+        "peekOfCode": "class Config:\n    # === Embedding Config ===\n    EMBEDDER_BASE_URL = os.getenv(\"EMBEDDER_BASE_URL\")\n    EMBEDDER_API_KEY = os.getenv(\"EMBEDDER_API_KEY\")\n    EMBEDDER_MODEL = os.getenv(\"EMBEDDER_MODEL\", \"text-embedding-3-small\")\n    try:\n        EMBEDDER_DIMENSION = int(os.getenv(\"EMBEDDER_DIMENSION\", \"1536\"))\n    except ValueError:\n        EMBEDDER_DIMENSION = 1536\n    # === Qdrant Config ===",
         "detail": "src.config",
         "documentation": {}
     },
@@ -801,7 +801,7 @@
         "kind": 2,
         "importPath": "tests.conftest",
         "description": "tests.conftest",
-        "peekOfCode": "def mock_env_vars():\n    \"\"\"\n    Ensure all tests run with a consistent, isolated environment.\n    This prevents local .env files from breaking tests unpredictably.\n    We must reload src.config after patching os.environ because\n    Config class attributes are evaluated at import time.\n    \"\"\"\n    env_vars = {\n        \"EMBEDDER_BASE_URL\": \"https://api.openai.com/v1\",\n        \"EMBEDDER_API_KEY\": \"test-key-123\",",
+        "peekOfCode": "def mock_env_vars():\n    \"\"\"\n    Ensure all tests run with a consistent, isolated environment.\n    This prevents local .env files from breaking tests unpredictably.\n    We must reload src.config after patching os.environ because\n    Config class attributes are evaluated at import time.\n    \"\"\"\n    env_vars = {\n        # Embedding config\n        \"EMBEDDER_BASE_URL\": \"https://api.openai.com/v1\",",
         "detail": "tests.conftest",
         "documentation": {}
     },
@@ -810,7 +810,7 @@
         "kind": 2,
         "importPath": "tests.test_config",
         "description": "tests.test_config",
-        "peekOfCode": "def test_config_loads_env_vars():\n    # Environment variables are already mocked by conftest.py\n    # So we simply import the config module\n    import src.config\n    # Force reload in case it was imported by another test before the mock took effect\n    importlib.reload(src.config)\n    from src.config import config\n    assert config.EMBEDDER_BASE_URL == \"https://api.openai.com/v1\"\n    assert config.EMBEDDER_MODEL == \"text-embedding-3-small\"\n    assert config.EMBEDDER_DIMENSION == 1536",
+        "peekOfCode": "def test_config_loads_env_vars():\n    # Environment variables are already mocked by conftest.py\n    import src.config\n    importlib.reload(src.config)\n    from src.config import config\n    # Embedding config\n    assert config.EMBEDDER_BASE_URL == \"https://api.openai.com/v1\"\n    assert config.EMBEDDER_MODEL == \"text-embedding-3-small\"\n    assert config.EMBEDDER_DIMENSION == 1536\n    # Qdrant config",
         "detail": "tests.test_config",
         "documentation": {}
     },
@@ -828,7 +828,16 @@
         "kind": 2,
         "importPath": "tests.test_config",
         "description": "tests.test_config",
-        "peekOfCode": "def test_config_handles_missing_vars(mock_load_dotenv):\n    import src.config\n    importlib.reload(src.config)\n    from src.config import config\n    # Defaults applied\n    assert config.EMBEDDER_MODEL == \"text-embedding-3-small\"\n    assert config.QDRANT_URL == \"http://localhost:6333\"\n    assert config.EMBEDDING_BATCH_SIZE == 100",
+        "peekOfCode": "def test_config_handles_missing_vars(mock_load_dotenv):\n    import src.config\n    importlib.reload(src.config)\n    from src.config import config\n    # Defaults applied\n    assert config.EMBEDDER_MODEL == \"text-embedding-3-small\"\n    assert config.QDRANT_URL == \"http://localhost:6333\"\n    assert config.EMBEDDING_BATCH_SIZE == 100\n    # LLM defaults\n    assert config.LLM_BASE_URL == \"\"",
+        "detail": "tests.test_config",
+        "documentation": {}
+    },
+    {
+        "label": "test_config_llm_independent_from_embedder",
+        "kind": 2,
+        "importPath": "tests.test_config",
+        "description": "tests.test_config",
+        "peekOfCode": "def test_config_llm_independent_from_embedder(mock_load_dotenv):\n    \"\"\"Verify LLM and Embedder configs are truly independent.\"\"\"\n    import src.config\n    importlib.reload(src.config)\n    from src.config import config\n    assert config.LLM_BASE_URL == \"http://localhost:11434\"\n    assert config.LLM_MODEL == \"llama3\"\n    assert config.EMBEDDER_BASE_URL == \"https://api.openai.com/v1\"\n    assert config.EMBEDDER_MODEL == \"text-embedding-3-small\"",
         "detail": "tests.test_config",
         "documentation": {}
     },

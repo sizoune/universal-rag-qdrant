@@ -13,14 +13,20 @@ def mock_env_vars():
     Config class attributes are evaluated at import time.
     """
     env_vars = {
+        # Embedding config
         "EMBEDDER_BASE_URL": "https://api.openai.com/v1",
         "EMBEDDER_API_KEY": "test-key-123",
         "EMBEDDER_MODEL": "text-embedding-3-small",
         "EMBEDDER_DIMENSION": "1536",
-        "VECTOR_PROVIDER": "qdrant",
+        # Qdrant config
         "QDRANT_URL": "http://localhost:6333",
         "QDRANT_API_KEY": "",
         "QDRANT_COLLECTION_NAME": "test_collection",
+        # LLM Chat config
+        "LLM_BASE_URL": "https://api.openai.com/v1",
+        "LLM_API_KEY": "test-llm-key-456",
+        "LLM_MODEL": "gpt-3.5-turbo",
+        # Memory & Search config
         "MEMORY_TYPE": "buffer_window",
         "MEMORY_SESSION_ID": "test_session",
         "MEMORY_WINDOW_SIZE": "5",

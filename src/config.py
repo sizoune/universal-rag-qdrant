@@ -3,8 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Config:
-    # Embedder Config
+    # === Embedding Config ===
     EMBEDDER_BASE_URL = os.getenv("EMBEDDER_BASE_URL")
     EMBEDDER_API_KEY = os.getenv("EMBEDDER_API_KEY")
     EMBEDDER_MODEL = os.getenv("EMBEDDER_MODEL", "text-embedding-3-small")
@@ -13,13 +14,19 @@ class Config:
     except ValueError:
         EMBEDDER_DIMENSION = 1536
 
-    # Qdrant Config
-    VECTOR_PROVIDER = os.getenv("VECTOR_PROVIDER", "qdrant")
+    # === Qdrant Config ===
     QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
     QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
-    QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "universal_rag_collection")
+    QDRANT_COLLECTION_NAME = os.getenv(
+        "QDRANT_COLLECTION_NAME", "universal_rag_collection"
+    )
 
-    # Memory Config
+    # === LLM Chat Config ===
+    LLM_BASE_URL = os.getenv("LLM_BASE_URL", "")
+    LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+    LLM_MODEL = os.getenv("LLM_MODEL", "llama3")
+
+    # === Memory Config ===
     MEMORY_TYPE = os.getenv("MEMORY_TYPE", "buffer_window")
     MEMORY_SESSION_ID = os.getenv("MEMORY_SESSION_ID", "default_session")
     try:
@@ -27,7 +34,7 @@ class Config:
     except ValueError:
         MEMORY_WINDOW_SIZE = 5
 
-    # Advanced Config
+    # === Advanced Config ===
     try:
         SEARCH_SCORE_THRESHOLD = float(os.getenv("SEARCH_SCORE_THRESHOLD", "0.7"))
         MAX_SEARCH_RESULTS = int(os.getenv("MAX_SEARCH_RESULTS", "4"))
@@ -38,5 +45,6 @@ class Config:
         MAX_SEARCH_RESULTS = 4
         EMBEDDING_BATCH_SIZE = 100
         MAX_BATCH_SCANNER_RETRIES = 3
+
 
 config = Config()
