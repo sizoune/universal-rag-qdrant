@@ -1,4 +1,5 @@
 import sys
+import os
 import argparse
 import logging
 from src.vector_store import (
@@ -11,9 +12,11 @@ from src.ingestion import parse_web_url, process_directory
 from src.chat import chat_interface
 from src.config import config
 
-# Configure logging
+# Configure logging (use LOG_LEVEL from .env, default INFO)
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -152,6 +155,7 @@ Examples:
   python main.py chat "apa itu SaaS"               # Single question, direct answer
   python main.py status                            # Check index status
   python main.py clear                             # Clear database
+  python main.py gateway                           # Start Telegram Bot
         """,
     )
 
@@ -179,6 +183,9 @@ Examples:
 
     # clear
     sub.add_parser("clear", help="Re-Index / Clear database (DANGER)")
+
+    # gateway
+    sub.add_parser("gateway", help="Start Telegram Bot gateway")
 
     return parser
 
@@ -228,6 +235,10 @@ def main():
         do_status()
     elif args.command == "clear":
         do_clear()
+    elif args.command == "gateway":
+        from src.telegram_bot import start_bot
+
+        start_bot(vector_store)
 
 
 if __name__ == "__main__":

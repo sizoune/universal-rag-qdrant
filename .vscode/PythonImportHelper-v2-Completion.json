@@ -84,6 +84,22 @@
         "documentation": {}
     },
     {
+        "label": "HumanMessage",
+        "importPath": "langchain_core.messages",
+        "description": "langchain_core.messages",
+        "isExtraImport": true,
+        "detail": "langchain_core.messages",
+        "documentation": {}
+    },
+    {
+        "label": "AIMessage",
+        "importPath": "langchain_core.messages",
+        "description": "langchain_core.messages",
+        "isExtraImport": true,
+        "detail": "langchain_core.messages",
+        "documentation": {}
+    },
+    {
         "label": "ChatOpenAI",
         "importPath": "langchain_openai",
         "description": "langchain_openai",
@@ -161,6 +177,14 @@
         "description": "langchain_ollama",
         "isExtraImport": true,
         "detail": "langchain_ollama",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "importPath": "src.config",
+        "description": "src.config",
+        "isExtraImport": true,
+        "detail": "src.config",
         "documentation": {}
     },
     {
@@ -333,6 +357,14 @@
         "documentation": {}
     },
     {
+        "label": "get_file_hash",
+        "importPath": "src.utils",
+        "description": "src.utils",
+        "isExtraImport": true,
+        "detail": "src.utils",
+        "documentation": {}
+    },
+    {
         "label": "is_file_allowed",
         "importPath": "src.utils",
         "description": "src.utils",
@@ -365,11 +397,236 @@
         "documentation": {}
     },
     {
+        "label": "load_cache",
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "isExtraImport": true,
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "save_cache",
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "isExtraImport": true,
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "get_content_hash",
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "isExtraImport": true,
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
         "label": "parse_code_file",
         "importPath": "src.code_parser",
         "description": "src.code_parser",
         "isExtraImport": true,
         "detail": "src.code_parser",
+        "documentation": {}
+    },
+    {
+        "label": "tempfile",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "tempfile",
+        "description": "tempfile",
+        "detail": "tempfile",
+        "documentation": {}
+    },
+    {
+        "label": "Update",
+        "importPath": "telegram",
+        "description": "telegram",
+        "isExtraImport": true,
+        "detail": "telegram",
+        "documentation": {}
+    },
+    {
+        "label": "BotCommand",
+        "importPath": "telegram",
+        "description": "telegram",
+        "isExtraImport": true,
+        "detail": "telegram",
+        "documentation": {}
+    },
+    {
+        "label": "Application",
+        "importPath": "telegram.ext",
+        "description": "telegram.ext",
+        "isExtraImport": true,
+        "detail": "telegram.ext",
+        "documentation": {}
+    },
+    {
+        "label": "CommandHandler",
+        "importPath": "telegram.ext",
+        "description": "telegram.ext",
+        "isExtraImport": true,
+        "detail": "telegram.ext",
+        "documentation": {}
+    },
+    {
+        "label": "MessageHandler",
+        "importPath": "telegram.ext",
+        "description": "telegram.ext",
+        "isExtraImport": true,
+        "detail": "telegram.ext",
+        "documentation": {}
+    },
+    {
+        "label": "filters",
+        "importPath": "telegram.ext",
+        "description": "telegram.ext",
+        "isExtraImport": true,
+        "detail": "telegram.ext",
+        "documentation": {}
+    },
+    {
+        "label": "ContextTypes",
+        "importPath": "telegram.ext",
+        "description": "telegram.ext",
+        "isExtraImport": true,
+        "detail": "telegram.ext",
+        "documentation": {}
+    },
+    {
+        "label": "ParseMode",
+        "importPath": "telegram.constants",
+        "description": "telegram.constants",
+        "isExtraImport": true,
+        "detail": "telegram.constants",
+        "documentation": {}
+    },
+    {
+        "label": "ChatAction",
+        "importPath": "telegram.constants",
+        "description": "telegram.constants",
+        "isExtraImport": true,
+        "detail": "telegram.constants",
+        "documentation": {}
+    },
+    {
+        "label": "parse_web_url",
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "isExtraImport": true,
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "load_local_document",
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "isExtraImport": true,
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "parse_web_url",
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "isExtraImport": true,
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "process_directory",
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "isExtraImport": true,
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "get_db_stats",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "clear_database",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "delete_by_source",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "initialize_vector_store",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "get_db_stats",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "clear_database",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "delete_by_source",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "get_chat_chain",
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "isExtraImport": true,
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "estimate_tokens",
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "isExtraImport": true,
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "SYSTEM_PROMPT_TEMPLATE",
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "isExtraImport": true,
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "chat_interface",
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "isExtraImport": true,
+        "detail": "src.chat",
         "documentation": {}
     },
     {
@@ -519,15 +776,6 @@
         "documentation": {}
     },
     {
-        "label": "tempfile",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "tempfile",
-        "description": "tempfile",
-        "detail": "tempfile",
-        "documentation": {}
-    },
-    {
         "label": "argparse",
         "kind": 6,
         "isExtraImport": true,
@@ -597,62 +845,6 @@
         "importPath": "subprocess",
         "description": "subprocess",
         "detail": "subprocess",
-        "documentation": {}
-    },
-    {
-        "label": "initialize_vector_store",
-        "importPath": "src.vector_store",
-        "description": "src.vector_store",
-        "isExtraImport": true,
-        "detail": "src.vector_store",
-        "documentation": {}
-    },
-    {
-        "label": "get_db_stats",
-        "importPath": "src.vector_store",
-        "description": "src.vector_store",
-        "isExtraImport": true,
-        "detail": "src.vector_store",
-        "documentation": {}
-    },
-    {
-        "label": "clear_database",
-        "importPath": "src.vector_store",
-        "description": "src.vector_store",
-        "isExtraImport": true,
-        "detail": "src.vector_store",
-        "documentation": {}
-    },
-    {
-        "label": "delete_by_source",
-        "importPath": "src.vector_store",
-        "description": "src.vector_store",
-        "isExtraImport": true,
-        "detail": "src.vector_store",
-        "documentation": {}
-    },
-    {
-        "label": "parse_web_url",
-        "importPath": "src.ingestion",
-        "description": "src.ingestion",
-        "isExtraImport": true,
-        "detail": "src.ingestion",
-        "documentation": {}
-    },
-    {
-        "label": "process_directory",
-        "importPath": "src.ingestion",
-        "description": "src.ingestion",
-        "isExtraImport": true,
-        "detail": "src.ingestion",
-        "documentation": {}
-    },
-    {
-        "label": "chat_interface",
-        "importPath": "src.chat",
-        "description": "src.chat",
-        "isExtraImport": true,
-        "detail": "src.chat",
         "documentation": {}
     },
     {
@@ -896,6 +1088,42 @@
         "description": "src.ingestion",
         "peekOfCode": "logger = logging.getLogger(__name__)\ndef get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,\n        length_function=len,\n    )\ndef parse_web_url(url: str) -> tuple[list[Document], bool]:\n    \"\"\"Scrapes clean article text from a web URL.",
         "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "start_bot",
+        "kind": 2,
+        "importPath": "src.telegram_bot",
+        "description": "src.telegram_bot",
+        "peekOfCode": "def start_bot(vector_store):\n    \"\"\"Start the Telegram bot (polling mode).\"\"\"\n    global _vector_store, _chain\n    token = config.TELEGRAM_BOT_TOKEN\n    if not token:\n        print(\"\\n❌ TELEGRAM_BOT_TOKEN tidak diset di .env!\")\n        print(\"   1. Buka Telegram → cari @BotFather\")\n        print(\"   2. Kirim /newbot → ikuti instruksi\")\n        print('   3. Copy token ke .env: TELEGRAM_BOT_TOKEN=\"your-token\"')\n        return",
+        "detail": "src.telegram_bot",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.telegram_bot",
+        "description": "src.telegram_bot",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n# Per-user chat history\nuser_histories: dict[int, list] = {}\n# Will be set by start_bot()\n_vector_store = None\n_chain = None\ndef _get_allowed_users() -> set[int]:\n    \"\"\"Parse TELEGRAM_ALLOWED_USERS into a set of user IDs.\"\"\"\n    raw = config.TELEGRAM_ALLOWED_USERS.strip()\n    if not raw:",
+        "detail": "src.telegram_bot",
+        "documentation": {}
+    },
+    {
+        "label": "_vector_store",
+        "kind": 5,
+        "importPath": "src.telegram_bot",
+        "description": "src.telegram_bot",
+        "peekOfCode": "_vector_store = None\n_chain = None\ndef _get_allowed_users() -> set[int]:\n    \"\"\"Parse TELEGRAM_ALLOWED_USERS into a set of user IDs.\"\"\"\n    raw = config.TELEGRAM_ALLOWED_USERS.strip()\n    if not raw:\n        return set()\n    try:\n        return {int(uid.strip()) for uid in raw.split(\",\") if uid.strip()}\n    except ValueError:",
+        "detail": "src.telegram_bot",
+        "documentation": {}
+    },
+    {
+        "label": "_chain",
+        "kind": 5,
+        "importPath": "src.telegram_bot",
+        "description": "src.telegram_bot",
+        "peekOfCode": "_chain = None\ndef _get_allowed_users() -> set[int]:\n    \"\"\"Parse TELEGRAM_ALLOWED_USERS into a set of user IDs.\"\"\"\n    raw = config.TELEGRAM_ALLOWED_USERS.strip()\n    if not raw:\n        return set()\n    try:\n        return {int(uid.strip()) for uid in raw.split(\",\") if uid.strip()}\n    except ValueError:\n        return set()",
+        "detail": "src.telegram_bot",
         "documentation": {}
     },
     {
@@ -1471,6 +1699,15 @@
         "importPath": "main",
         "description": "main",
         "peekOfCode": "def main():\n    parser = build_parser()\n    args = parser.parse_args()\n    vector_store = init_system()\n    if args.command is None:\n        # No subcommand → interactive menu\n        interactive_menu(vector_store)\n    elif args.command == \"ingest-web\":\n        do_ingest_web(vector_store, args.url)\n    elif args.command == \"ingest-file\":",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "log_level",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "log_level = os.getenv(\"LOG_LEVEL\", \"INFO\").upper()\nlogging.basicConfig(\n    level=getattr(logging, log_level, logging.INFO),\n    format=\"%(asctime)s - %(levelname)s - %(message)s\",\n)\nlogger = logging.getLogger(__name__)\ndef print_menu():\n    print(\"\\n=============================================\")\n    print(\"      UNIVERSAL RAG SYSTEM (Qdrant MVP)      \")\n    print(\"=============================================\")",
         "detail": "main",
         "documentation": {}
     },

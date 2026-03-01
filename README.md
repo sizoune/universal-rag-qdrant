@@ -11,6 +11,7 @@ Dibangun di atas fondasi **Qdrant** sebagai *Vector Database* dan **LangChain**,
 |---------|-----------|
 | [Arsitektur RAG](docs/architecture.md) | Cara kerja ingest-web, chunking, embedding, pencarian vektor di Qdrant, dan bagaimana AI menjawab pertanyaan |
 | [Penggunaan Token & Biaya](docs/token-usage.md) | Penjelasan token, perbandingan biaya antar provider, strategi hemat, dan dampak konfigurasi |
+| [Telegram Bot Gateway](docs/telegram-bot.md) | Setup @BotFather, commands, upload file, arsitektur bot |
 
 ## 🎯 Target Pengguna
 
@@ -28,8 +29,10 @@ Platform ini dirancang untuk dapat di-skalakan mulai dari penggunaan personal de
 *   **Smart Web Scraper:** Mengekstrak konten utama halaman web secara cerdas (mendukung Wikipedia, artikel HTML5, dan situs umum).
 *   **Smart Document Parsing:** Mendukung format `.pdf`, `.txt`, `.csv`, dan `.docx`.
 *   **Smart Ingestion (Deduplication):** Persistent hash cache + delete-before-insert di Qdrant — ingest ulang URL/file yang sama tidak akan membuat duplikasi, konten yang tidak berubah otomatis di-skip.
+*   **Tree-sitter Code Parsing:** File `.py` dan `.js` di-parse secara semantic (per-fungsi/kelas), bukan potongan karakter.
 *   **Conversational Memory:** Menyimpan konteks percakapan agar AI memahami pertanyaan lanjutan.
 *   **Token Usage Display:** Estimasi penggunaan token ditampilkan setelah setiap jawaban chat.
+*   **Telegram Bot Gateway:** Akses semua fungsi RAG via Telegram — chat, ingest URL, upload file, cek status.
 *   **CLI Arguments:** Jalankan perintah langsung tanpa menu interaktif.
 
 ## 📂 Struktur Proyek
@@ -44,14 +47,17 @@ rag-project/
 ├── .cache/               # Persistent hash cache (auto-generated, gitignored)
 ├── docs/
 │   ├── architecture.md   # Arsitektur RAG & cara kerja sistem
-│   └── token-usage.md    # Penggunaan token & dampak biaya
+│   ├── token-usage.md    # Penggunaan token & dampak biaya
+│   └── telegram-bot.md   # Panduan Telegram Bot Gateway
 ├── src/
 │   ├── cache_store.py        # Persistent hash cache (JSON)
-│   ├── config.py             # Membaca .env (Embedding, Qdrant, LLM terpisah)
+│   ├── code_parser.py        # Tree-sitter semantic code parser
+│   ├── config.py             # Membaca .env (Embedding, Qdrant, LLM, Telegram)
 │   ├── embedding_manager.py  # Factory koneksi OpenAI/Gemini/Ollama embedding
 │   ├── vector_store.py       # Koneksi Qdrant + validasi dimensi + dedup
 │   ├── ingestion.py          # Web scraper & pemrosesan dokumen (smart update)
 │   ├── chat.py               # RAG chain (retrieval + LLM) & memori
+│   ├── telegram_bot.py       # Telegram Bot gateway
 │   └── utils.py              # Utilitas: hashing, filter file
 └── tests/
     ├── conftest.py           # Fixture pytest (isolasi .env)
@@ -83,6 +89,9 @@ pip install -r requirements.txt
 Copy file `.env.example` menjadi `.env` dan sesuaikan:
 
 ```env
+# === LOG LEVEL ===
+LOG_LEVEL="INFO"   # DEBUG, INFO, WARNING, ERROR
+
 # === EMBEDDING CONFIG ===
 EMBEDDER_BASE_URL="http://localhost:11434"    # Ollama lokal
 EMBEDDER_MODEL="nomic-embed-text:latest"
@@ -128,6 +137,13 @@ python main.py clear
 # Bantuan
 python main.py --help
 ```
+
+#### Telegram Bot Gateway
+```bash
+# Start Telegram Bot (semua fungsi RAG via Telegram)
+python main.py gateway
+```
+> 📖 Panduan lengkap: [docs/telegram-bot.md](docs/telegram-bot.md)
 
 ### 4. Menggunakan Migrasi (Opsional)
 ```bash

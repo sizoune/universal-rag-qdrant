@@ -26,6 +26,10 @@ class Config:
     LLM_API_KEY = os.getenv("LLM_API_KEY", "")
     LLM_MODEL = os.getenv("LLM_MODEL", "llama3")
 
+    # === Telegram Bot Config ===
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_ALLOWED_USERS = os.getenv("TELEGRAM_ALLOWED_USERS", "")
+
     # === Memory Config ===
     MEMORY_TYPE = os.getenv("MEMORY_TYPE", "buffer_window")
     MEMORY_SESSION_ID = os.getenv("MEMORY_SESSION_ID", "default_session")
