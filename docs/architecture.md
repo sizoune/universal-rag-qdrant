@@ -82,6 +82,53 @@ Contoh: Artikel 5000 karakter → dipotong menjadi ~5-6 chunk yang saling tumpan
 - Chunk kecil menghasilkan pencarian yang lebih presisi
 - Overlap menjaga konteks antar potongan tidak terputus
 
+#### Langkah 2b: Tree-sitter Smart Code Parsing
+
+Untuk file kode (`.py`, `.js`), sistem **tidak** menggunakan chunking karakter. Sebaliknya, menggunakan [Tree-sitter](https://tree-sitter.github.io/) untuk parsing **Abstract Syntax Tree (AST)** dan mengekstrak blok kode secara semantic.
+
+```mermaid
+flowchart TD
+    A["File .py / .js"] --> B{"Tree-sitter\navailable?"}
+    B -->|"Ya"| C["Parse AST"]
+    B -->|"Tidak"| D["Fallback:\nTextLoader + chunking biasa"]
+    C --> E["Extract top-level nodes:\nfunction, class, decorated"]
+    E --> F{"Blok > 1500 char?"}
+    F -->|"Ya"| G["Sub-split dengan\nRecursiveCharacterTextSplitter"]
+    F -->|"Tidak"| H["1 blok = 1 Document"]
+    E --> I["Sisa kode\n(imports, constants)"]
+    I --> J["1 Document: module_scope"]
+
+    style C fill:#6366f1,color:#fff
+    style H fill:#10b981,color:#000
+```
+
+**Contoh — file `src/utils.py` (2 fungsi + imports):**
+
+```
+TANPA Tree-sitter (karakter-based):
+  Chunk 1: "import hashlib\nimport os\n\ndef get_file_h..." (terpotong!)
+  Chunk 2: "...ash(filepath):\n    hasher = sha256\n..."  (campur 2 fungsi)
+
+DENGAN Tree-sitter (semantic):
+  Chunk 1: [function] get_file_hash     → 321 chars (utuh)
+  Chunk 2: [function] is_file_allowed   → 1,029 chars (utuh)
+  Chunk 3: [module_scope] imports       → 24 chars
+```
+
+**Mengapa ini penting untuk RAG?**
+- Pencarian vektor mengembalikan **fungsi utuh**, bukan potongan kode yang rusak
+- LLM mendapat konteks kode yang **lengkap dan bermakna**
+- Metadata menyimpan `node_type` dan `node_name` → bisa filter per-fungsi
+
+**Bahasa yang didukung:**
+
+| Ekstensi | Grammar | Node types yang diekstrak |
+|----------|---------|--------------------------|
+| `.py` | `tree-sitter-python` | `function_definition`, `class_definition`, `decorated_definition` |
+| `.js` | `tree-sitter-javascript` | `function_declaration`, `class_declaration`, `export_statement` |
+| Lainnya | — | Fallback ke `TextLoader` + chunking biasa |
+
+
 #### Langkah 3: Embedding (Mengubah Teks → Vektor)
 
 ```python
