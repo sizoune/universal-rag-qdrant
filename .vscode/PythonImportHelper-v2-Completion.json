@@ -204,6 +204,38 @@
         "documentation": {}
     },
     {
+        "label": "Document",
+        "importPath": "langchain_core.documents",
+        "description": "langchain_core.documents",
+        "isExtraImport": true,
+        "detail": "langchain_core.documents",
+        "documentation": {}
+    },
+    {
+        "label": "Document",
+        "importPath": "langchain_core.documents",
+        "description": "langchain_core.documents",
+        "isExtraImport": true,
+        "detail": "langchain_core.documents",
+        "documentation": {}
+    },
+    {
+        "label": "RecursiveCharacterTextSplitter",
+        "importPath": "langchain_text_splitters",
+        "description": "langchain_text_splitters",
+        "isExtraImport": true,
+        "detail": "langchain_text_splitters",
+        "documentation": {}
+    },
+    {
+        "label": "RecursiveCharacterTextSplitter",
+        "importPath": "langchain_text_splitters",
+        "description": "langchain_text_splitters",
+        "isExtraImport": true,
+        "detail": "langchain_text_splitters",
+        "documentation": {}
+    },
+    {
         "label": "load_dotenv",
         "importPath": "dotenv",
         "description": "dotenv",
@@ -277,22 +309,6 @@
         "documentation": {}
     },
     {
-        "label": "RecursiveCharacterTextSplitter",
-        "importPath": "langchain_text_splitters",
-        "description": "langchain_text_splitters",
-        "isExtraImport": true,
-        "detail": "langchain_text_splitters",
-        "documentation": {}
-    },
-    {
-        "label": "Document",
-        "importPath": "langchain_core.documents",
-        "description": "langchain_core.documents",
-        "isExtraImport": true,
-        "detail": "langchain_core.documents",
-        "documentation": {}
-    },
-    {
         "label": "get_file_hash",
         "importPath": "src.utils",
         "description": "src.utils",
@@ -346,6 +362,14 @@
         "description": "src.cache_store",
         "isExtraImport": true,
         "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "parse_code_file",
+        "importPath": "src.code_parser",
+        "description": "src.code_parser",
+        "isExtraImport": true,
+        "detail": "src.code_parser",
         "documentation": {}
     },
     {
@@ -758,6 +782,42 @@
         "documentation": {}
     },
     {
+        "label": "parse_code_file",
+        "kind": 2,
+        "importPath": "src.code_parser",
+        "description": "src.code_parser",
+        "peekOfCode": "def parse_code_file(filepath: str) -> list[Document]:\n    \"\"\"Parse a code file using Tree-sitter into semantic chunks.\n    Each function/class becomes its own Document. Falls back to\n    RecursiveCharacterTextSplitter if Tree-sitter is unavailable\n    or for blocks exceeding MAX_BLOCK_SIZE.\n    Returns list of Documents with metadata including language and node info.\n    \"\"\"\n    ext = os.path.splitext(filepath)[1].lower()\n    abs_path = os.path.abspath(filepath)\n    # Try to get Tree-sitter parser",
+        "detail": "src.code_parser",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.code_parser",
+        "description": "src.code_parser",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n# Language configs: extension → (grammar module, top-level node types to extract)\nLANGUAGE_MAP = {\n    \".py\": {\n        \"module\": \"tree_sitter_python\",\n        \"node_types\": [\n            \"function_definition\",\n            \"class_definition\",\n            \"decorated_definition\",\n        ],",
+        "detail": "src.code_parser",
+        "documentation": {}
+    },
+    {
+        "label": "LANGUAGE_MAP",
+        "kind": 5,
+        "importPath": "src.code_parser",
+        "description": "src.code_parser",
+        "peekOfCode": "LANGUAGE_MAP = {\n    \".py\": {\n        \"module\": \"tree_sitter_python\",\n        \"node_types\": [\n            \"function_definition\",\n            \"class_definition\",\n            \"decorated_definition\",\n        ],\n    },\n    \".js\": {",
+        "detail": "src.code_parser",
+        "documentation": {}
+    },
+    {
+        "label": "MAX_BLOCK_SIZE",
+        "kind": 5,
+        "importPath": "src.code_parser",
+        "description": "src.code_parser",
+        "peekOfCode": "MAX_BLOCK_SIZE = 1500\ndef _get_parser(ext: str):\n    \"\"\"Create a Tree-sitter parser for the given file extension.\n    Returns (parser, language, node_types) or None if unsupported.\"\"\"\n    lang_config = LANGUAGE_MAP.get(ext)\n    if not lang_config:\n        return None\n    try:\n        from tree_sitter import Language, Parser\n        import importlib",
+        "detail": "src.code_parser",
+        "documentation": {}
+    },
+    {
         "label": "Config",
         "kind": 6,
         "importPath": "src.config",
@@ -816,7 +876,7 @@
         "kind": 2,
         "importPath": "src.ingestion",
         "description": "src.ingestion",
-        "peekOfCode": "def load_local_document(filepath: str) -> list[Document]:\n    \"\"\"Loads a single document based on its extension.\"\"\"\n    ext = os.path.splitext(filepath)[1].lower()\n    try:\n        if ext == \".pdf\":\n            loader = PyPDFLoader(filepath)\n        elif ext == \".csv\":\n            loader = CSVLoader(filepath)\n        elif ext == \".docx\":\n            loader = Docx2txtLoader(filepath)",
+        "peekOfCode": "def load_local_document(filepath: str) -> list[Document]:\n    \"\"\"Loads a single document based on its extension.\n    Uses Tree-sitter for code files (.py, .js), standard loaders for others.\"\"\"\n    ext = os.path.splitext(filepath)[1].lower()\n    # Try Tree-sitter for code files\n    if ext in (\".py\", \".js\"):\n        docs = parse_code_file(filepath)\n        if docs is not None:\n            for doc in docs:\n                doc.metadata[\"file_hash\"] = get_file_hash(filepath)",
         "detail": "src.ingestion",
         "documentation": {}
     },

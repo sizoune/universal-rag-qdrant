@@ -12,6 +12,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from src.utils import get_file_hash, is_file_allowed
 from src.cache_store import load_cache, save_cache, get_content_hash
+from src.code_parser import parse_code_file
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +102,18 @@ def parse_web_url(url: str) -> tuple[list[Document], bool]:
 
 
 def load_local_document(filepath: str) -> list[Document]:
-    """Loads a single document based on its extension."""
+    """Loads a single document based on its extension.
+    Uses Tree-sitter for code files (.py, .js), standard loaders for others."""
     ext = os.path.splitext(filepath)[1].lower()
+
+    # Try Tree-sitter for code files
+    if ext in (".py", ".js"):
+        docs = parse_code_file(filepath)
+        if docs is not None:
+            for doc in docs:
+                doc.metadata["file_hash"] = get_file_hash(filepath)
+            return docs
+        # Fallback to TextLoader if Tree-sitter failed
 
     try:
         if ext == ".pdf":
