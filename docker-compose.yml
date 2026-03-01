@@ -7,9 +7,23 @@ services:
     ports:
       - "6333:6333"      # REST API
       - "6334:6334"      # gRPC
-    volumes:
+volumes:
       - qdrant_storage:/qdrant/storage
     restart: always
+
+  rag-bot:
+    build: .
+    container_name: universal_rag_bot
+    env_file: .env
+    depends_on:
+      - qdrant
+    environment:
+      # Override the Qdrant URL to point to the local docker service
+      - QDRANT_URL=http://qdrant:6333
+    restart: always
+    volumes:
+      # Mount cache directory for persistence between restarts
+      - ./.cache:/app/.cache
 
 volumes:
   qdrant_storage:

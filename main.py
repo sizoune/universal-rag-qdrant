@@ -7,6 +7,7 @@ from src.vector_store import (
     get_db_stats,
     clear_database,
     delete_by_source,
+    ingest_documents,
 )
 from src.ingestion import parse_web_url, process_directory
 from src.chat import chat_interface
@@ -61,7 +62,7 @@ def do_ingest_web(vector_store, url):
             if deleted:
                 print(f"Removed {deleted} old chunks for this URL.")
             print(f"Adding {len(docs)} new chunks to Qdrant...")
-            vector_store.add_documents(docs)
+            ingest_documents(docs, vector_store)
             print("Ingestion selesai.")
         else:
             print("Gagal mengekstrak teks dari URL.")
@@ -83,7 +84,7 @@ def do_ingest_file(vector_store, path):
             print(
                 f"Adding {len(docs)} new chunks to Qdrant (Batch Size: {config.EMBEDDING_BATCH_SIZE})..."
             )
-            vector_store.add_documents(docs)
+            ingest_documents(docs, vector_store)
             print("Ingestion selesai.")
         else:
             print(

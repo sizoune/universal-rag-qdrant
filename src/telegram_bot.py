@@ -18,7 +18,12 @@ from telegram.constants import ParseMode, ChatAction
 
 from src.config import config
 from src.ingestion import parse_web_url, load_local_document
-from src.vector_store import get_db_stats, clear_database, delete_by_source
+from src.vector_store import (
+    get_db_stats,
+    clear_database,
+    delete_by_source,
+    ingest_documents,
+)
 from src.chat import get_chat_chain, estimate_tokens, SYSTEM_PROMPT_TEMPLATE
 from src.cache_store import load_cache, save_cache, get_content_hash
 from src.utils import get_file_hash
@@ -113,7 +118,7 @@ async def cmd_web(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status = f"🗑️ Dihapus {deleted} chunk lama\n" if deleted else ""
 
     await msg.edit_text(f"{status}📦 Embedding {len(docs)} chunks...")
-    _vector_store.add_documents(docs)
+    ingest_documents(docs, _vector_store)
 
     await msg.edit_text(
         f"✅ Ingestion selesai!\n"
@@ -229,7 +234,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chunks = splitter.split_documents(docs)
 
         await msg.edit_text(f"{status}📦 Embedding {len(chunks)} chunks...")
-        _vector_store.add_documents(chunks)
+        ingest_documents(chunks, _vector_store)
 
         await msg.edit_text(
             f"✅ File berhasil di-ingest!\n"

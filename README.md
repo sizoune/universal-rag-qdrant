@@ -1,152 +1,136 @@
-# Universal RAG System
-> Sebuah platform AI berbasis Retrieval-Augmented Generation (RAG) yang efisien, skalabel, dan modular. Menggunakan Qdrant sebagai basis *vector database* untuk mengekstrak dan mencari konteks dokumen atau website menggunakan berbagai model AI (OpenAI, Gemini, Ollama) pilihan Anda.
+﻿# Universal RAG System
 
-Universal RAG (Retrieval-Augmented Generation) System adalah framework AI modular yang memungkinkan Anda melakukan "tanya jawab" (Q&A) cerdas dengan data Anda sendiri—baik berupa file lokal maupun artikel website. 
+Universal RAG adalah sistem Retrieval-Augmented Generation berbasis Qdrant + LangChain untuk ingest dokumen/URL lalu tanya-jawab dengan LLM pilihan (OpenAI, Gemini, Ollama, atau OpenAI-compatible endpoint).
 
-Dibangun di atas fondasi **Qdrant** sebagai *Vector Database* dan **LangChain**, sistem ini dirancang dengan prinsip fleksibilitas tinggi. Anda tidak terikat pada satu penyedia AI; Anda bisa menggunakan OpenAI, Google Gemini, Ollama (untuk inferensi lokal/gratis), atau model *OpenAI-compatible* lainnya hanya dengan mengubah konfigurasi.
+## Dokumentasi
 
-## 📖 Dokumentasi
+- [Arsitektur RAG](docs/architecture.md)
+- [Advanced RAG & Deployment](docs/advanced-rag-deployment.md)
+- [Token Usage](docs/token-usage.md)
+- [Telegram Bot Gateway](docs/telegram-bot.md)
 
-| Dokumen | Deskripsi |
-|---------|-----------|
-| [Arsitektur RAG](docs/architecture.md) | Cara kerja ingest-web, chunking, embedding, pencarian vektor di Qdrant, dan bagaimana AI menjawab pertanyaan |
-| [Penggunaan Token & Biaya](docs/token-usage.md) | Penjelasan token, perbandingan biaya antar provider, strategi hemat, dan dampak konfigurasi |
-| [Telegram Bot Gateway](docs/telegram-bot.md) | Setup @BotFather, commands, upload file, arsitektur bot |
+## Fitur Utama
 
-## 🎯 Target Pengguna
+- Multi-provider embedding dan chat model
+- Strict dimension checking untuk keamanan perubahan model embedding
+- Smart ingestion untuk web/file + dedup berbasis hash
+- Hybrid search mode (dense + sparse) dengan fallback aman
+- Optional cross-encoder reranking
+- Telegram bot gateway
+- Docker deployment (Qdrant + bot)
 
-Platform ini dirancang untuk dapat di-skalakan mulai dari penggunaan personal dengan *budget* nol rupiah hingga skala *enterprise*:
-
-*   **Peneliti & Akademisi:** Analisis ratusan jurnal PDF dan artikel web dengan cepat dan gratis menggunakan Ollama (model embedding dan LLM berjalan secara lokal).
-*   **Karyawan Perusahaan:** Pencarian informasi instan dari tumpukan SOP, laporan, dan dokumen Word perusahaan menggunakan tingkat akurasi tinggi dari provider *Cloud* seperti OpenAI atau Gemini.
-*   **Developer & Data Scientist:** Kerangka kerja (*framework*) siap pakai yang agnostik terhadap *provider* untuk membangun aplikasi AI/RAG kustom dengan pengelolaan *state* (memori), dimensi yang tervalidasi, dan alat migrasi bawaan.
-
-## ✨ Fitur Utama
-
-*   **Multi-Provider Embedding & LLM:** Mendukung OpenAI, Google Gemini, Ollama, dan *OpenAI-Compatible APIs* (Nvidia, Mistral, dll). Cukup ubah URL dan *API Key* di `.env`.
-*   **Konfigurasi Independen:** Embedding, Qdrant, dan LLM Chat memiliki konfigurasi terpisah — bisa mix-and-match provider.
-*   **Qdrant Vector Database dengan *Strict Dimension Checking*:** Secara otomatis memblokir proses ingesti jika model embedding yang baru memiliki dimensi yang berbeda dengan koleksi data yang sudah ada.
-*   **Smart Web Scraper:** Mengekstrak konten utama halaman web secara cerdas (mendukung Wikipedia, artikel HTML5, dan situs umum).
-*   **Smart Document Parsing:** Mendukung format `.pdf`, `.txt`, `.csv`, dan `.docx`.
-*   **Smart Ingestion (Deduplication):** Persistent hash cache + delete-before-insert di Qdrant — ingest ulang URL/file yang sama tidak akan membuat duplikasi, konten yang tidak berubah otomatis di-skip.
-*   **Tree-sitter Code Parsing:** File `.py` dan `.js` di-parse secara semantic (per-fungsi/kelas), bukan potongan karakter.
-*   **Conversational Memory:** Menyimpan konteks percakapan agar AI memahami pertanyaan lanjutan.
-*   **Token Usage Display:** Estimasi penggunaan token ditampilkan setelah setiap jawaban chat.
-*   **Telegram Bot Gateway:** Akses semua fungsi RAG via Telegram — chat, ingest URL, upload file, cek status.
-*   **CLI Arguments:** Jalankan perintah langsung tanpa menu interaktif.
-
-## 📂 Struktur Proyek
+## Struktur Proyek
 
 ```text
 rag-project/
-├── .env                  # Konfigurasi (dibuat dari .env.example)
-├── .env.example          # Template konfigurasi
-├── requirements.txt      # Dependensi Python
-├── main.py               # Aplikasi utama (CLI + argparse)
-├── migrate.py            # Utility migrasi data antar database/model
-├── .cache/               # Persistent hash cache (auto-generated, gitignored)
-├── docs/
-│   ├── architecture.md   # Arsitektur RAG & cara kerja sistem
-│   ├── token-usage.md    # Penggunaan token & dampak biaya
-│   └── telegram-bot.md   # Panduan Telegram Bot Gateway
-├── src/
-│   ├── cache_store.py        # Persistent hash cache (JSON)
-│   ├── code_parser.py        # Tree-sitter semantic code parser
-│   ├── config.py             # Membaca .env (Embedding, Qdrant, LLM, Telegram)
-│   ├── embedding_manager.py  # Factory koneksi OpenAI/Gemini/Ollama embedding
-│   ├── vector_store.py       # Koneksi Qdrant + validasi dimensi + dedup
-│   ├── ingestion.py          # Web scraper & pemrosesan dokumen (smart update)
-│   ├── chat.py               # RAG chain (retrieval + LLM) & memori
-│   ├── telegram_bot.py       # Telegram Bot gateway
-│   └── utils.py              # Utilitas: hashing, filter file
-└── tests/
-    ├── conftest.py           # Fixture pytest (isolasi .env)
-    ├── test_config.py        # Test konfigurasi
-    ├── test_embedding_manager.py  # Test factory embedding
-    ├── test_vector_store.py  # Test dimensi & koleksi Qdrant
-    └── test_utils.py         # Test hashing & filter
+|-- docs/
+|   |-- architecture.md
+|   |-- advanced-rag-deployment.md
+|   |-- token-usage.md
+|   `-- telegram-bot.md
+|-- src/
+|   |-- chat.py
+|   |-- config.py
+|   |-- hybrid_retriever.py
+|   |-- ingestion.py
+|   |-- reranker.py
+|   |-- sparse_encoder.py
+|   `-- vector_store.py
+|-- tests/
+|-- Dockerfile
+|-- docker-compose.yml
+|-- main.py
+`-- requirements.txt
 ```
 
-## 🚀 Cara Instalasi & Penggunaan
+## Setup Local
 
-### 1. Persiapan Environment
-Pastikan Anda memiliki Python 3.10+ yang terinstal.
+### 1. Buat virtual environment
 
 ```bash
-# Buat Virtual Environment 
 python -m venv venv
+```
 
-# Aktifkan (Windows)
-.\venv\Scripts\activate.bat
-# Atau Mac/Linux:
-# source venv/bin/activate
+Windows:
 
-# Install Dependensi
+```bash
+venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Atur Konfigurasi
-Copy file `.env.example` menjadi `.env` dan sesuaikan:
+### 2. Siapkan environment
+
+Copy `.env.example` ke `.env`, lalu isi variabel utama:
 
 ```env
-# === LOG LEVEL ===
-LOG_LEVEL="INFO"   # DEBUG, INFO, WARNING, ERROR
+# Embedding
+EMBEDDER_BASE_URL="https://api.openai.com/v1"
+EMBEDDER_API_KEY="your-api-key"
+EMBEDDER_MODEL="text-embedding-3-small"
+EMBEDDER_DIMENSION=1536
 
-# === EMBEDDING CONFIG ===
-EMBEDDER_BASE_URL="http://localhost:11434"    # Ollama lokal
-EMBEDDER_MODEL="nomic-embed-text:latest"
-EMBEDDER_DIMENSION=768
-
-# === QDRANT CONFIG ===
+# Qdrant
 QDRANT_URL="http://localhost:6333"
+QDRANT_COLLECTION_NAME="universal_rag_collection"
 
-# === LLM CHAT CONFIG ===
-LLM_BASE_URL="http://localhost:11434"         # Bisa beda dari embedding!
-LLM_MODEL="llama3"
+# LLM
+LLM_BASE_URL="https://api.openai.com/v1"
+LLM_API_KEY="your-api-key"
+LLM_MODEL="gpt-3.5-turbo"
+
+# Advanced RAG
+SEARCH_MODE="dense"              # dense | hybrid
+RERANKER_ENABLED=false
+RERANKER_MODEL="Xenova/ms-marco-MiniLM-L-6-v2"
 ```
 
-> **Catatan:** Jalankan Qdrant via Docker: `docker run -p 6333:6333 qdrant/qdrant`
+### 3. Jalankan perintah
 
-### 3. Jalankan Aplikasi
-
-#### Menu Interaktif
 ```bash
-python main.py
+# status
+venv\Scripts\python main.py status
+
+# ingest web
+venv\Scripts\python main.py ingest-web https://id.wikipedia.org/wiki/SaaS
+
+# ingest folder/file
+venv\Scripts\python main.py ingest-file ./documents
+
+# chat interaktif
+venv\Scripts\python main.py chat
+
+# single-shot question
+venv\Scripts\python main.py chat "apa itu SaaS?"
+
+# telegram gateway
+venv\Scripts\python main.py gateway
 ```
 
-#### CLI Arguments (Langsung Tanpa Menu)
+## Advanced RAG (Ringkas)
+
+- `SEARCH_MODE="dense"`: retrieval semantic biasa
+- `SEARCH_MODE="hybrid"`: dense + sparse/BM25 retrieval
+- `RERANKER_ENABLED=true`: aktifkan cross-encoder reranking setelah retrieval
+
+Penjelasan lengkap ada di [docs/advanced-rag-deployment.md](docs/advanced-rag-deployment.md).
+
+## Docker Deployment
+
 ```bash
-# Ingest URL
-python main.py ingest-web https://id.wikipedia.org/wiki/SaaS
-
-# Ingest folder/file
-python main.py ingest-file ./documents
-
-# Chat interaktif
-python main.py chat
-
-# Tanya langsung (jawab & selesai)
-python main.py chat "apa itu SaaS?"
-
-# Cek status database
-python main.py status
-
-# Hapus database
-python main.py clear
-
-# Bantuan
-python main.py --help
+docker compose up --build
 ```
 
-#### Telegram Bot Gateway
+Service default:
+- `qdrant` (port 6333)
+- `rag-bot` (menjalankan `python main.py gateway`)
+
+## Testing
+
 ```bash
-# Start Telegram Bot (semua fungsi RAG via Telegram)
-python main.py gateway
+venv\Scripts\python -m pytest tests/
 ```
-> 📖 Panduan lengkap: [docs/telegram-bot.md](docs/telegram-bot.md)
 
-### 4. Menggunakan Migrasi (Opsional)
-```bash
-python migrate.py
-```
-Pilih opsi **(1)** untuk memindah ke server Qdrant baru tanpa memproses AI (gratis), atau opsi **(2)** untuk memproses ulang isi teks lama menggunakan Model AI yang baru.
+## Catatan
+
+- Jika mengganti model embedding dengan dimensi berbeda, lakukan re-index/clear collection.
+- Untuk mode hybrid, disarankan ingest ulang agar sparse vector tersedia untuk semua chunk.

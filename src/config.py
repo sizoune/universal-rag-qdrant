@@ -50,5 +50,10 @@ class Config:
         EMBEDDING_BATCH_SIZE = 100
         MAX_BATCH_SCANNER_RETRIES = 3
 
+    # === Hybrid Search & Re-ranking ===
+    SEARCH_MODE = os.getenv("SEARCH_MODE", "dense")  # "dense" or "hybrid"
+    RERANKER_ENABLED = os.getenv("RERANKER_ENABLED", "false")
+    RERANKER_MODEL = os.getenv("RERANKER_MODEL", "Xenova/ms-marco-MiniLM-L-6-v2")
+
 
 config = Config()

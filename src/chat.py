@@ -91,16 +91,31 @@ def get_llm():
 
 
 def get_chat_chain(vector_store):
-    """Sets up the retrieval + LLM conversational chain."""
+    """Sets up the retrieval + LLM conversational chain.
+    Supports dense (default) and hybrid (dense+sparse) search modes,
+    with optional cross-encoder re-ranking.
+    """
     llm = get_llm()
+    search_mode = config.SEARCH_MODE.lower()
 
-    retriever = vector_store.as_retriever(
-        search_type="similarity_score_threshold",
-        search_kwargs={
-            "score_threshold": config.SEARCH_SCORE_THRESHOLD,
-            "k": config.MAX_SEARCH_RESULTS,
-        },
-    )
+    if search_mode == "hybrid":
+        logger.info("Using HYBRID search mode (dense + sparse BM25)")
+        from src.hybrid_retriever import HybridRetriever
+
+        retriever = HybridRetriever(
+            vector_store=vector_store,
+            score_threshold=config.SEARCH_SCORE_THRESHOLD,
+            k=config.MAX_SEARCH_RESULTS,
+        )
+    else:
+        logger.info("Using DENSE search mode")
+        retriever = vector_store.as_retriever(
+            search_type="similarity_score_threshold",
+            search_kwargs={
+                "score_threshold": config.SEARCH_SCORE_THRESHOLD,
+                "k": config.MAX_SEARCH_RESULTS,
+            },
+        )
 
     system_prompt = SYSTEM_PROMPT_TEMPLATE
 
