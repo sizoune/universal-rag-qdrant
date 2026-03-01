@@ -1,6 +1,6 @@
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as rest
-from langchain_community.vectorstores import Qdrant
+from langchain_qdrant import QdrantVectorStore
 from src.config import config
 from src.embedding_manager import get_embedder
 import logging
@@ -17,7 +17,7 @@ def get_qdrant_client() -> QdrantClient:
     return client
 
 
-def initialize_vector_store() -> Qdrant:
+def initialize_vector_store() -> QdrantVectorStore:
     """
     Initializes Qdrant, validates dimensions (Strict Dimension Checking),
     and returns a LangChain Qdrant vector store instance.
@@ -52,7 +52,7 @@ def initialize_vector_store() -> Qdrant:
         )
 
     except Exception as e:
-        if "Failed. Expected" in str(e):
+        if "Strict Dimension Checking Failed" in str(e) or "Failed. Expected" in str(e):
             raise e  # Re-raise custom validation error
 
         # Collection doesn't exist or other error, try to create it
@@ -68,8 +68,8 @@ def initialize_vector_store() -> Qdrant:
 
     embedder = get_embedder()
 
-    vector_store = Qdrant(
-        client=client, collection_name=collection_name, embeddings=embedder
+    vector_store = QdrantVectorStore(
+        client=client, collection_name=collection_name, embedding=embedder
     )
 
     return vector_store

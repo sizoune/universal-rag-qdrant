@@ -1,0 +1,1267 @@
+[
+    {
+        "label": "create_retrieval_chain",
+        "importPath": "langchain_classic.chains",
+        "description": "langchain_classic.chains",
+        "isExtraImport": true,
+        "detail": "langchain_classic.chains",
+        "documentation": {}
+    },
+    {
+        "label": "create_stuff_documents_chain",
+        "importPath": "langchain_classic.chains.combine_documents",
+        "description": "langchain_classic.chains.combine_documents",
+        "isExtraImport": true,
+        "detail": "langchain_classic.chains.combine_documents",
+        "documentation": {}
+    },
+    {
+        "label": "ChatPromptTemplate",
+        "importPath": "langchain_core.prompts",
+        "description": "langchain_core.prompts",
+        "isExtraImport": true,
+        "detail": "langchain_core.prompts",
+        "documentation": {}
+    },
+    {
+        "label": "MessagesPlaceholder",
+        "importPath": "langchain_core.prompts",
+        "description": "langchain_core.prompts",
+        "isExtraImport": true,
+        "detail": "langchain_core.prompts",
+        "documentation": {}
+    },
+    {
+        "label": "HumanMessage",
+        "importPath": "langchain_core.messages",
+        "description": "langchain_core.messages",
+        "isExtraImport": true,
+        "detail": "langchain_core.messages",
+        "documentation": {}
+    },
+    {
+        "label": "AIMessage",
+        "importPath": "langchain_core.messages",
+        "description": "langchain_core.messages",
+        "isExtraImport": true,
+        "detail": "langchain_core.messages",
+        "documentation": {}
+    },
+    {
+        "label": "ChatOpenAI",
+        "importPath": "langchain_openai",
+        "description": "langchain_openai",
+        "isExtraImport": true,
+        "detail": "langchain_openai",
+        "documentation": {}
+    },
+    {
+        "label": "OpenAIEmbeddings",
+        "importPath": "langchain_openai",
+        "description": "langchain_openai",
+        "isExtraImport": true,
+        "detail": "langchain_openai",
+        "documentation": {}
+    },
+    {
+        "label": "AzureOpenAIEmbeddings",
+        "importPath": "langchain_openai",
+        "description": "langchain_openai",
+        "isExtraImport": true,
+        "detail": "langchain_openai",
+        "documentation": {}
+    },
+    {
+        "label": "OpenAIEmbeddings",
+        "importPath": "langchain_openai",
+        "description": "langchain_openai",
+        "isExtraImport": true,
+        "detail": "langchain_openai",
+        "documentation": {}
+    },
+    {
+        "label": "ChatGoogleGenerativeAI",
+        "importPath": "langchain_google_genai",
+        "description": "langchain_google_genai",
+        "isExtraImport": true,
+        "detail": "langchain_google_genai",
+        "documentation": {}
+    },
+    {
+        "label": "GoogleGenerativeAIEmbeddings",
+        "importPath": "langchain_google_genai",
+        "description": "langchain_google_genai",
+        "isExtraImport": true,
+        "detail": "langchain_google_genai",
+        "documentation": {}
+    },
+    {
+        "label": "GoogleGenerativeAIEmbeddings",
+        "importPath": "langchain_google_genai",
+        "description": "langchain_google_genai",
+        "isExtraImport": true,
+        "detail": "langchain_google_genai",
+        "documentation": {}
+    },
+    {
+        "label": "ChatOllama",
+        "importPath": "langchain_community.chat_models",
+        "description": "langchain_community.chat_models",
+        "isExtraImport": true,
+        "detail": "langchain_community.chat_models",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "importPath": "src.config",
+        "description": "src.config",
+        "isExtraImport": true,
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "importPath": "src.config",
+        "description": "src.config",
+        "isExtraImport": true,
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "importPath": "src.config",
+        "description": "src.config",
+        "isExtraImport": true,
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "importPath": "src.config",
+        "description": "src.config",
+        "isExtraImport": true,
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "importPath": "src.config",
+        "description": "src.config",
+        "isExtraImport": true,
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "logging",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "logging",
+        "description": "logging",
+        "detail": "logging",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "load_dotenv",
+        "importPath": "dotenv",
+        "description": "dotenv",
+        "isExtraImport": true,
+        "detail": "dotenv",
+        "documentation": {}
+    },
+    {
+        "label": "OllamaEmbeddings",
+        "importPath": "langchain_ollama",
+        "description": "langchain_ollama",
+        "isExtraImport": true,
+        "detail": "langchain_ollama",
+        "documentation": {}
+    },
+    {
+        "label": "OllamaEmbeddings",
+        "importPath": "langchain_ollama",
+        "description": "langchain_ollama",
+        "isExtraImport": true,
+        "detail": "langchain_ollama",
+        "documentation": {}
+    },
+    {
+        "label": "Embeddings",
+        "importPath": "langchain_core.embeddings",
+        "description": "langchain_core.embeddings",
+        "isExtraImport": true,
+        "detail": "langchain_core.embeddings",
+        "documentation": {}
+    },
+    {
+        "label": "Embeddings",
+        "importPath": "langchain_core.embeddings",
+        "description": "langchain_core.embeddings",
+        "isExtraImport": true,
+        "detail": "langchain_core.embeddings",
+        "documentation": {}
+    },
+    {
+        "label": "BeautifulSoup",
+        "importPath": "bs4",
+        "description": "bs4",
+        "isExtraImport": true,
+        "detail": "bs4",
+        "documentation": {}
+    },
+    {
+        "label": "requests",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "requests",
+        "description": "requests",
+        "detail": "requests",
+        "documentation": {}
+    },
+    {
+        "label": "PyPDFLoader",
+        "importPath": "langchain_community.document_loaders",
+        "description": "langchain_community.document_loaders",
+        "isExtraImport": true,
+        "detail": "langchain_community.document_loaders",
+        "documentation": {}
+    },
+    {
+        "label": "TextLoader",
+        "importPath": "langchain_community.document_loaders",
+        "description": "langchain_community.document_loaders",
+        "isExtraImport": true,
+        "detail": "langchain_community.document_loaders",
+        "documentation": {}
+    },
+    {
+        "label": "CSVLoader",
+        "importPath": "langchain_community.document_loaders",
+        "description": "langchain_community.document_loaders",
+        "isExtraImport": true,
+        "detail": "langchain_community.document_loaders",
+        "documentation": {}
+    },
+    {
+        "label": "Docx2txtLoader",
+        "importPath": "langchain_community.document_loaders",
+        "description": "langchain_community.document_loaders",
+        "isExtraImport": true,
+        "detail": "langchain_community.document_loaders",
+        "documentation": {}
+    },
+    {
+        "label": "WebBaseLoader",
+        "importPath": "langchain_community.document_loaders",
+        "description": "langchain_community.document_loaders",
+        "isExtraImport": true,
+        "detail": "langchain_community.document_loaders",
+        "documentation": {}
+    },
+    {
+        "label": "RecursiveCharacterTextSplitter",
+        "importPath": "langchain_text_splitters",
+        "description": "langchain_text_splitters",
+        "isExtraImport": true,
+        "detail": "langchain_text_splitters",
+        "documentation": {}
+    },
+    {
+        "label": "Document",
+        "importPath": "langchain_core.documents",
+        "description": "langchain_core.documents",
+        "isExtraImport": true,
+        "detail": "langchain_core.documents",
+        "documentation": {}
+    },
+    {
+        "label": "get_file_hash",
+        "importPath": "src.utils",
+        "description": "src.utils",
+        "isExtraImport": true,
+        "detail": "src.utils",
+        "documentation": {}
+    },
+    {
+        "label": "is_file_allowed",
+        "importPath": "src.utils",
+        "description": "src.utils",
+        "isExtraImport": true,
+        "detail": "src.utils",
+        "documentation": {}
+    },
+    {
+        "label": "get_file_hash",
+        "importPath": "src.utils",
+        "description": "src.utils",
+        "isExtraImport": true,
+        "detail": "src.utils",
+        "documentation": {}
+    },
+    {
+        "label": "is_file_allowed",
+        "importPath": "src.utils",
+        "description": "src.utils",
+        "isExtraImport": true,
+        "detail": "src.utils",
+        "documentation": {}
+    },
+    {
+        "label": "hashlib",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "hashlib",
+        "description": "hashlib",
+        "detail": "hashlib",
+        "documentation": {}
+    },
+    {
+        "label": "QdrantClient",
+        "importPath": "qdrant_client",
+        "description": "qdrant_client",
+        "isExtraImport": true,
+        "detail": "qdrant_client",
+        "documentation": {}
+    },
+    {
+        "label": "QdrantClient",
+        "importPath": "qdrant_client",
+        "description": "qdrant_client",
+        "isExtraImport": true,
+        "detail": "qdrant_client",
+        "documentation": {}
+    },
+    {
+        "label": "QdrantClient",
+        "importPath": "qdrant_client",
+        "description": "qdrant_client",
+        "isExtraImport": true,
+        "detail": "qdrant_client",
+        "documentation": {}
+    },
+    {
+        "label": "models",
+        "importPath": "qdrant_client.http",
+        "description": "qdrant_client.http",
+        "isExtraImport": true,
+        "detail": "qdrant_client.http",
+        "documentation": {}
+    },
+    {
+        "label": "models",
+        "importPath": "qdrant_client.http",
+        "description": "qdrant_client.http",
+        "isExtraImport": true,
+        "detail": "qdrant_client.http",
+        "documentation": {}
+    },
+    {
+        "label": "models",
+        "importPath": "qdrant_client.http",
+        "description": "qdrant_client.http",
+        "isExtraImport": true,
+        "detail": "qdrant_client.http",
+        "documentation": {}
+    },
+    {
+        "label": "QdrantVectorStore",
+        "importPath": "langchain_qdrant",
+        "description": "langchain_qdrant",
+        "isExtraImport": true,
+        "detail": "langchain_qdrant",
+        "documentation": {}
+    },
+    {
+        "label": "get_embedder",
+        "importPath": "src.embedding_manager",
+        "description": "src.embedding_manager",
+        "isExtraImport": true,
+        "detail": "src.embedding_manager",
+        "documentation": {}
+    },
+    {
+        "label": "get_embedder",
+        "importPath": "src.embedding_manager",
+        "description": "src.embedding_manager",
+        "isExtraImport": true,
+        "detail": "src.embedding_manager",
+        "documentation": {}
+    },
+    {
+        "label": "pytest",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pytest",
+        "description": "pytest",
+        "detail": "pytest",
+        "documentation": {}
+    },
+    {
+        "label": "importlib",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "importlib",
+        "description": "importlib",
+        "detail": "importlib",
+        "documentation": {}
+    },
+    {
+        "label": "patch",
+        "importPath": "unittest.mock",
+        "description": "unittest.mock",
+        "isExtraImport": true,
+        "detail": "unittest.mock",
+        "documentation": {}
+    },
+    {
+        "label": "patch",
+        "importPath": "unittest.mock",
+        "description": "unittest.mock",
+        "isExtraImport": true,
+        "detail": "unittest.mock",
+        "documentation": {}
+    },
+    {
+        "label": "patch",
+        "importPath": "unittest.mock",
+        "description": "unittest.mock",
+        "isExtraImport": true,
+        "detail": "unittest.mock",
+        "documentation": {}
+    },
+    {
+        "label": "MagicMock",
+        "importPath": "unittest.mock",
+        "description": "unittest.mock",
+        "isExtraImport": true,
+        "detail": "unittest.mock",
+        "documentation": {}
+    },
+    {
+        "label": "patch",
+        "importPath": "unittest.mock",
+        "description": "unittest.mock",
+        "isExtraImport": true,
+        "detail": "unittest.mock",
+        "documentation": {}
+    },
+    {
+        "label": "patch",
+        "importPath": "unittest.mock",
+        "description": "unittest.mock",
+        "isExtraImport": true,
+        "detail": "unittest.mock",
+        "documentation": {}
+    },
+    {
+        "label": "MagicMock",
+        "importPath": "unittest.mock",
+        "description": "unittest.mock",
+        "isExtraImport": true,
+        "detail": "unittest.mock",
+        "documentation": {}
+    },
+    {
+        "label": "tempfile",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "tempfile",
+        "description": "tempfile",
+        "detail": "tempfile",
+        "documentation": {}
+    },
+    {
+        "label": "argparse",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "argparse",
+        "description": "argparse",
+        "detail": "argparse",
+        "documentation": {}
+    },
+    {
+        "label": "glob",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "glob",
+        "description": "glob",
+        "detail": "glob",
+        "documentation": {}
+    },
+    {
+        "label": "shutil",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "shutil",
+        "description": "shutil",
+        "detail": "shutil",
+        "documentation": {}
+    },
+    {
+        "label": "sys",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "sys",
+        "description": "sys",
+        "detail": "sys",
+        "documentation": {}
+    },
+    {
+        "label": "sysconfig",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "sysconfig",
+        "description": "sysconfig",
+        "detail": "sysconfig",
+        "documentation": {}
+    },
+    {
+        "label": "winreg",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "winreg",
+        "description": "winreg",
+        "detail": "winreg",
+        "documentation": {}
+    },
+    {
+        "label": "site",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "site",
+        "description": "site",
+        "detail": "site",
+        "documentation": {}
+    },
+    {
+        "label": "subprocess",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "subprocess",
+        "description": "subprocess",
+        "detail": "subprocess",
+        "documentation": {}
+    },
+    {
+        "label": "initialize_vector_store",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "get_db_stats",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "clear_database",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "parse_web_url",
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "isExtraImport": true,
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "process_directory",
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "isExtraImport": true,
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "chat_interface",
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "isExtraImport": true,
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "get_llm",
+        "kind": 2,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "def get_llm():\n    \"\"\"Factory function for Chat LLMs (parallel to get_embedder)\"\"\"\n    base_url = config.EMBEDDER_BASE_URL\n    model_name = (\n        config.EMBEDDER_MODEL\n    )  # Defaulting to same, might need separate config in future\n    api_key = config.EMBEDDER_API_KEY\n    # We will use simple heuristic to match the LLM provider\n    if base_url and \"api.openai.com\" in base_url:\n        return ChatOpenAI(",
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "get_chat_chain",
+        "kind": 2,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "def get_chat_chain(vector_store):\n    \"\"\"Sets up the retrieval + LLM conversational chain.\"\"\"\n    llm = get_llm()\n    retriever = vector_store.as_retriever(\n        search_type=\"similarity_score_threshold\",\n        search_kwargs={\n            \"score_threshold\": config.SEARCH_SCORE_THRESHOLD,\n            \"k\": config.MAX_SEARCH_RESULTS,\n        },\n    )",
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "chat_interface",
+        "kind": 2,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "def chat_interface(vector_store):\n    \"\"\"Interactive CLI loop for chatting.\"\"\"\n    print(\"\\n--- Interactive Chat (Type '/exit' to quit) ---\")\n    chain = get_chat_chain(vector_store)\n    global chat_history\n    while True:\n        user_input = input(\"\\nYou: \")\n        if user_input.strip() == \"/exit\":\n            break\n        print(\"\\nThinking...\")",
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n# Basic In-Memory Chat History\nchat_history = []\ndef get_llm():\n    \"\"\"Factory function for Chat LLMs (parallel to get_embedder)\"\"\"\n    base_url = config.EMBEDDER_BASE_URL\n    model_name = (\n        config.EMBEDDER_MODEL\n    )  # Defaulting to same, might need separate config in future\n    api_key = config.EMBEDDER_API_KEY",
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "chat_history",
+        "kind": 5,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "chat_history = []\ndef get_llm():\n    \"\"\"Factory function for Chat LLMs (parallel to get_embedder)\"\"\"\n    base_url = config.EMBEDDER_BASE_URL\n    model_name = (\n        config.EMBEDDER_MODEL\n    )  # Defaulting to same, might need separate config in future\n    api_key = config.EMBEDDER_API_KEY\n    # We will use simple heuristic to match the LLM provider\n    if base_url and \"api.openai.com\" in base_url:",
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "Config",
+        "kind": 6,
+        "importPath": "src.config",
+        "description": "src.config",
+        "peekOfCode": "class Config:\n    # Embedder Config\n    EMBEDDER_BASE_URL = os.getenv(\"EMBEDDER_BASE_URL\")\n    EMBEDDER_API_KEY = os.getenv(\"EMBEDDER_API_KEY\")\n    EMBEDDER_MODEL = os.getenv(\"EMBEDDER_MODEL\", \"text-embedding-3-small\")\n    try:\n        EMBEDDER_DIMENSION = int(os.getenv(\"EMBEDDER_DIMENSION\", \"1536\"))\n    except ValueError:\n        EMBEDDER_DIMENSION = 1536\n    # Qdrant Config",
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "kind": 5,
+        "importPath": "src.config",
+        "description": "src.config",
+        "peekOfCode": "config = Config()",
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "get_embedder",
+        "kind": 2,
+        "importPath": "src.embedding_manager",
+        "description": "src.embedding_manager",
+        "peekOfCode": "def get_embedder() -> Embeddings:\n    \"\"\"\n    Factory function to return the correct LangChain Embeddings instance\n    based on the configuration.\n    \"\"\"\n    base_url = config.EMBEDDER_BASE_URL\n    model_name = config.EMBEDDER_MODEL\n    api_key = config.EMBEDDER_API_KEY\n    # Simple heuristic to determine provider if not explicitly set\n    if base_url and \"api.openai.com\" in base_url:",
+        "detail": "src.embedding_manager",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.embedding_manager",
+        "description": "src.embedding_manager",
+        "peekOfCode": "logger = logging.getLogger(__name__)\ndef get_embedder() -> Embeddings:\n    \"\"\"\n    Factory function to return the correct LangChain Embeddings instance\n    based on the configuration.\n    \"\"\"\n    base_url = config.EMBEDDER_BASE_URL\n    model_name = config.EMBEDDER_MODEL\n    api_key = config.EMBEDDER_API_KEY\n    # Simple heuristic to determine provider if not explicitly set",
+        "detail": "src.embedding_manager",
+        "documentation": {}
+    },
+    {
+        "label": "get_text_splitter",
+        "kind": 2,
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "peekOfCode": "def get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    # Chunking limits as per PRD (100-1000 characters)\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,\n        length_function=len,\n    )\ndef parse_web_url(url: str) -> list[Document]:\n    \"\"\"Scrapes clean text from a web URL using WebBaseLoader and BeautifulSoup.\"\"\"",
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "parse_web_url",
+        "kind": 2,
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "peekOfCode": "def parse_web_url(url: str) -> list[Document]:\n    \"\"\"Scrapes clean text from a web URL using WebBaseLoader and BeautifulSoup.\"\"\"\n    logger.info(f\"Scraping Web URL: {url}\")\n    try:\n        # Adding user-agent to bypass simple blocking\n        loader = WebBaseLoader(\n            url,\n            header_template={\"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)\"},\n        )\n        docs = loader.load()",
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "load_local_document",
+        "kind": 2,
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "peekOfCode": "def load_local_document(filepath: str) -> list[Document]:\n    \"\"\"Loads a single document based on its extension.\"\"\"\n    ext = os.path.splitext(filepath)[1].lower()\n    try:\n        if ext == \".pdf\":\n            loader = PyPDFLoader(filepath)\n        elif ext == \".csv\":\n            loader = CSVLoader(filepath)\n        elif ext == \".docx\":\n            loader = Docx2txtLoader(filepath)",
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "process_directory",
+        "kind": 2,
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "peekOfCode": "def process_directory(dir_path: str) -> list[Document]:\n    \"\"\"\n    Scans directory, filters files, checks hashes for incremental updates,\n    and returns chunked LangChain documents for Vector Store ingestion.\n    \"\"\"\n    logger.info(f\"Scanning directory: {dir_path}\")\n    all_chunks = []\n    skipped_count = 0\n    if not os.path.exists(dir_path) or not os.path.isdir(dir_path):\n        logger.error(f\"Directory '{dir_path}' does not exist.\")",
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n# Very basic dictionary cache for Incremental Updates (in-memory for MVP)\n# In production, this would be a local SQLite DB or Redis\nFILE_HASH_CACHE = {}\ndef get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    # Chunking limits as per PRD (100-1000 characters)\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,",
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "FILE_HASH_CACHE",
+        "kind": 5,
+        "importPath": "src.ingestion",
+        "description": "src.ingestion",
+        "peekOfCode": "FILE_HASH_CACHE = {}\ndef get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    # Chunking limits as per PRD (100-1000 characters)\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,\n        length_function=len,\n    )\ndef parse_web_url(url: str) -> list[Document]:",
+        "detail": "src.ingestion",
+        "documentation": {}
+    },
+    {
+        "label": "get_file_hash",
+        "kind": 2,
+        "importPath": "src.utils",
+        "description": "src.utils",
+        "peekOfCode": "def get_file_hash(filepath: str) -> str:\n    \"\"\"Computes SHA256 hash of a file for incremental caching.\"\"\"\n    hasher = hashlib.sha256()\n    with open(filepath, \"rb\") as f:\n        buf = f.read(65536)\n        while len(buf) > 0:\n            hasher.update(buf)\n            buf = f.read(65536)\n    return hasher.hexdigest()\ndef is_file_allowed(filepath: str, max_size_mb: int = 1) -> bool:",
+        "detail": "src.utils",
+        "documentation": {}
+    },
+    {
+        "label": "is_file_allowed",
+        "kind": 2,
+        "importPath": "src.utils",
+        "description": "src.utils",
+        "peekOfCode": "def is_file_allowed(filepath: str, max_size_mb: int = 1) -> bool:\n    \"\"\"\n    Checks if a file is permitted (e.g., skips .git, node_modules,\n    binary files, or oversized files).\n    \"\"\"\n    # 1. Skip specific directories\n    ignore_dirs = {\".git\", \"node_modules\", \"__pycache__\", \"venv\", \".venv\"}\n    # Normalize path to handle both Windows (\\) and Unix (/) separators uniformly\n    normalized_path = filepath.replace(\"\\\\\", \"/\")\n    path_parts = normalized_path.split(\"/\")",
+        "detail": "src.utils",
+        "documentation": {}
+    },
+    {
+        "label": "get_qdrant_client",
+        "kind": 2,
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "peekOfCode": "def get_qdrant_client() -> QdrantClient:\n    \"\"\"Initialize and return the Qdrant client.\"\"\"\n    if config.QDRANT_API_KEY:\n        client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)\n    else:\n        client = QdrantClient(url=config.QDRANT_URL)\n    return client\ndef initialize_vector_store() -> QdrantVectorStore:\n    \"\"\"\n    Initializes Qdrant, validates dimensions (Strict Dimension Checking),",
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "initialize_vector_store",
+        "kind": 2,
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "peekOfCode": "def initialize_vector_store() -> QdrantVectorStore:\n    \"\"\"\n    Initializes Qdrant, validates dimensions (Strict Dimension Checking),\n    and returns a LangChain Qdrant vector store instance.\n    \"\"\"\n    client = get_qdrant_client()\n    collection_name = config.QDRANT_COLLECTION_NAME\n    expected_dimension = config.EMBEDDER_DIMENSION\n    try:\n        collection_info = client.get_collection(collection_name)",
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "get_db_stats",
+        "kind": 2,
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "peekOfCode": "def get_db_stats():\n    \"\"\"Helper to get current database statistics.\"\"\"\n    try:\n        client = get_qdrant_client()\n        collection_info = client.get_collection(config.QDRANT_COLLECTION_NAME)\n        count = collection_info.points_count\n        dim = collection_info.config.params.vectors.size\n        return {\n            \"collection_name\": config.QDRANT_COLLECTION_NAME,\n            \"document_count\": count,",
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "clear_database",
+        "kind": 2,
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "peekOfCode": "def clear_database():\n    \"\"\"Dangerous option: Re-Index/Clear collection.\"\"\"\n    client = get_qdrant_client()\n    try:\n        client.delete_collection(config.QDRANT_COLLECTION_NAME)\n        logger.info(f\"Collection {config.QDRANT_COLLECTION_NAME} deleted successfully.\")\n        return True\n    except Exception as e:\n        logger.error(f\"Failed to delete collection: {e}\")\n        return False",
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "peekOfCode": "logger = logging.getLogger(__name__)\ndef get_qdrant_client() -> QdrantClient:\n    \"\"\"Initialize and return the Qdrant client.\"\"\"\n    if config.QDRANT_API_KEY:\n        client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)\n    else:\n        client = QdrantClient(url=config.QDRANT_URL)\n    return client\ndef initialize_vector_store() -> QdrantVectorStore:\n    \"\"\"",
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "mock_env_vars",
+        "kind": 2,
+        "importPath": "tests.conftest",
+        "description": "tests.conftest",
+        "peekOfCode": "def mock_env_vars():\n    \"\"\"\n    Ensure all tests run with a consistent, isolated environment.\n    This prevents local .env files from breaking tests unpredictably.\n    We must reload src.config after patching os.environ because\n    Config class attributes are evaluated at import time.\n    \"\"\"\n    env_vars = {\n        \"EMBEDDER_BASE_URL\": \"https://api.openai.com/v1\",\n        \"EMBEDDER_API_KEY\": \"test-key-123\",",
+        "detail": "tests.conftest",
+        "documentation": {}
+    },
+    {
+        "label": "test_config_loads_env_vars",
+        "kind": 2,
+        "importPath": "tests.test_config",
+        "description": "tests.test_config",
+        "peekOfCode": "def test_config_loads_env_vars():\n    # Environment variables are already mocked by conftest.py\n    # So we simply import the config module\n    import src.config\n    # Force reload in case it was imported by another test before the mock took effect\n    importlib.reload(src.config)\n    from src.config import config\n    assert config.EMBEDDER_BASE_URL == \"https://api.openai.com/v1\"\n    assert config.EMBEDDER_MODEL == \"text-embedding-3-small\"\n    assert config.EMBEDDER_DIMENSION == 1536",
+        "detail": "tests.test_config",
+        "documentation": {}
+    },
+    {
+        "label": "test_config_handles_invalid_types",
+        "kind": 2,
+        "importPath": "tests.test_config",
+        "description": "tests.test_config",
+        "peekOfCode": "def test_config_handles_invalid_types():\n    import src.config\n    importlib.reload(src.config)\n    from src.config import config\n    # Should fallback to defaults if int() or float() casting fails\n    assert config.EMBEDDER_DIMENSION == 1536\n    assert config.SEARCH_SCORE_THRESHOLD == 0.7\n@patch.dict(os.environ, {}, clear=True)\n@patch(\"src.config.load_dotenv\")\ndef test_config_handles_missing_vars(mock_load_dotenv):",
+        "detail": "tests.test_config",
+        "documentation": {}
+    },
+    {
+        "label": "test_config_handles_missing_vars",
+        "kind": 2,
+        "importPath": "tests.test_config",
+        "description": "tests.test_config",
+        "peekOfCode": "def test_config_handles_missing_vars(mock_load_dotenv):\n    import src.config\n    importlib.reload(src.config)\n    from src.config import config\n    # Defaults applied\n    assert config.EMBEDDER_MODEL == \"text-embedding-3-small\"\n    assert config.QDRANT_URL == \"http://localhost:6333\"\n    assert config.EMBEDDING_BATCH_SIZE == 100",
+        "detail": "tests.test_config",
+        "documentation": {}
+    },
+    {
+        "label": "reload_components",
+        "kind": 2,
+        "importPath": "tests.test_embedding_manager",
+        "description": "tests.test_embedding_manager",
+        "peekOfCode": "def reload_components():\n    import src.config\n    import src.embedding_manager\n    importlib.reload(src.config)\n    importlib.reload(src.embedding_manager)\n    return src.embedding_manager.get_embedder\n@patch.dict(\n    os.environ,\n    {\n        \"EMBEDDER_BASE_URL\": \"https://api.openai.com/v1\",",
+        "detail": "tests.test_embedding_manager",
+        "documentation": {}
+    },
+    {
+        "label": "test_openai_embedding_factory",
+        "kind": 2,
+        "importPath": "tests.test_embedding_manager",
+        "description": "tests.test_embedding_manager",
+        "peekOfCode": "def test_openai_embedding_factory():\n    get_embedder = reload_components()\n    embedder = get_embedder()\n    # Assert type\n    assert isinstance(embedder, OpenAIEmbeddings)\n    assert embedder.model == \"text-embedding-3-small\"\n@patch.dict(\n    os.environ,\n    {\n        \"EMBEDDER_BASE_URL\": \"\",",
+        "detail": "tests.test_embedding_manager",
+        "documentation": {}
+    },
+    {
+        "label": "test_gemini_embedding_factory",
+        "kind": 2,
+        "importPath": "tests.test_embedding_manager",
+        "description": "tests.test_embedding_manager",
+        "peekOfCode": "def test_gemini_embedding_factory():\n    get_embedder = reload_components()\n    embedder = get_embedder()\n    # Assert type based on heuristic (starts with AIza)\n    assert isinstance(embedder, GoogleGenerativeAIEmbeddings)\n@patch.dict(\n    os.environ,\n    {\n        \"EMBEDDER_BASE_URL\": \"http://localhost:11434\",\n        \"EMBEDDER_API_KEY\": \"\",",
+        "detail": "tests.test_embedding_manager",
+        "documentation": {}
+    },
+    {
+        "label": "test_ollama_embedding_factory",
+        "kind": 2,
+        "importPath": "tests.test_embedding_manager",
+        "description": "tests.test_embedding_manager",
+        "peekOfCode": "def test_ollama_embedding_factory():\n    get_embedder = reload_components()\n    embedder = get_embedder()\n    # Assert it is an instance of Ollama depending on the logic\n    assert isinstance(embedder, OllamaEmbeddings)",
+        "detail": "tests.test_embedding_manager",
+        "documentation": {}
+    },
+    {
+        "label": "test_get_file_hash",
+        "kind": 2,
+        "importPath": "tests.test_utils",
+        "description": "tests.test_utils",
+        "peekOfCode": "def test_get_file_hash():\n    # Create a temporary file with known content\n    with tempfile.NamedTemporaryFile(delete=False) as tmp:\n        tmp.write(b\"hello world\")\n        tmp_path = tmp.name\n    try:\n        # Expected SHA-256 for \"hello world\"\n        expected_hash = (\n            \"b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9\"\n        )",
+        "detail": "tests.test_utils",
+        "documentation": {}
+    },
+    {
+        "label": "test_is_file_allowed_extensions",
+        "kind": 2,
+        "importPath": "tests.test_utils",
+        "description": "tests.test_utils",
+        "peekOfCode": "def test_is_file_allowed_extensions(mock_getsize):\n    mock_getsize.return_value = 100\n    assert is_file_allowed(\"document.pdf\") is True\n    assert is_file_allowed(\"data.csv\") is True\n    assert is_file_allowed(\"notes.txt\") is True\n    assert is_file_allowed(\"script.py\") is True\n    assert is_file_allowed(\"image.png\") is False\n    assert is_file_allowed(\"app.exe\") is False\n@patch(\"os.path.getsize\")\ndef test_is_file_allowed_directories(mock_getsize):",
+        "detail": "tests.test_utils",
+        "documentation": {}
+    },
+    {
+        "label": "test_is_file_allowed_directories",
+        "kind": 2,
+        "importPath": "tests.test_utils",
+        "description": "tests.test_utils",
+        "peekOfCode": "def test_is_file_allowed_directories(mock_getsize):\n    mock_getsize.return_value = 100\n    assert is_file_allowed(os.path.join(\".git\", \"config\")) is False\n    assert is_file_allowed(os.path.join(\"node_modules\", \"package.json\")) is False\n    assert is_file_allowed(os.path.join(\"venv\", \"bin\", \"python\")) is False\n    assert is_file_allowed(os.path.join(\"src\", \"main.py\")) is True\ndef test_is_file_allowed_size():\n    # Create a dummy large file (> 1MB)\n    with tempfile.NamedTemporaryFile(suffix=\".txt\", delete=False) as tmp:\n        tmp.write(b\"0\" * (1024 * 1024 + 100))  # 1MB + 100 bytes",
+        "detail": "tests.test_utils",
+        "documentation": {}
+    },
+    {
+        "label": "test_is_file_allowed_size",
+        "kind": 2,
+        "importPath": "tests.test_utils",
+        "description": "tests.test_utils",
+        "peekOfCode": "def test_is_file_allowed_size():\n    # Create a dummy large file (> 1MB)\n    with tempfile.NamedTemporaryFile(suffix=\".txt\", delete=False) as tmp:\n        tmp.write(b\"0\" * (1024 * 1024 + 100))  # 1MB + 100 bytes\n        large_file = tmp.name\n    try:\n        assert is_file_allowed(large_file, max_size_mb=1) is False\n        # Test a smaller file\n        assert is_file_allowed(__file__) is True\n    finally:",
+        "detail": "tests.test_utils",
+        "documentation": {}
+    },
+    {
+        "label": "test_strict_dimension_checking_fails",
+        "kind": 2,
+        "importPath": "tests.test_vector_store",
+        "description": "tests.test_vector_store",
+        "peekOfCode": "def test_strict_dimension_checking_fails(mock_get_embedder, mock_get_client):\n    \"\"\"\n    Test that ValueError is raised when existing collection dimension\n    does not match the .env EMBEDDER_DIMENSION (1536 from conftest).\n    \"\"\"\n    config = _get_config()\n    initialize_vector_store = _get_initialize()\n    mock_client = MagicMock(spec=QdrantClient)\n    mock_get_client.return_value = mock_client\n    # Langchain Qdrant internally validates dimensions by calling embed_documents",
+        "detail": "tests.test_vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "test_strict_dimension_checking_passes",
+        "kind": 2,
+        "importPath": "tests.test_vector_store",
+        "description": "tests.test_vector_store",
+        "peekOfCode": "def test_strict_dimension_checking_passes(mock_get_embedder, mock_get_client):\n    \"\"\"\n    Test that it passes successfully when dimensions match.\n    \"\"\"\n    config = _get_config()\n    initialize_vector_store = _get_initialize()\n    mock_client = MagicMock(spec=QdrantClient)\n    mock_get_client.return_value = mock_client\n    # Langchain Qdrant internally validates dimensions by calling embed_documents\n    mock_embeddings = MagicMock(spec=Embeddings)",
+        "detail": "tests.test_vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "test_collection_creation_on_not_found",
+        "kind": 2,
+        "importPath": "tests.test_vector_store",
+        "description": "tests.test_vector_store",
+        "peekOfCode": "def test_collection_creation_on_not_found(mock_get_embedder, mock_get_client):\n    \"\"\"\n    Test that a new collection is created if one does not exist.\n    \"\"\"\n    config = _get_config()\n    initialize_vector_store = _get_initialize()\n    mock_client = MagicMock(spec=QdrantClient)\n    mock_get_client.return_value = mock_client\n    # Langchain Qdrant internally validates dimensions by calling embed_documents\n    mock_embeddings = MagicMock(spec=Embeddings)",
+        "detail": "tests.test_vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "Tee",
+        "kind": 6,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "class Tee:\n    def __init__(self, file):\n        self.f = file\n    def write(self, what):\n        if self.f is not None:\n            try:\n                self.f.write(what.replace(\"\\n\", \"\\r\\n\"))\n            except OSError:\n                pass\n        tee_f.write(what)",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "get_root_hkey",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def get_root_hkey():\n    try:\n        winreg.OpenKey(\n            winreg.HKEY_LOCAL_MACHINE, root_key_name, 0, winreg.KEY_CREATE_SUB_KEY\n        )\n        return winreg.HKEY_LOCAL_MACHINE\n    except OSError:\n        # Either not exist, or no permissions to create subkey means\n        # must be HKCU\n        return winreg.HKEY_CURRENT_USER",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "create_shortcut",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def create_shortcut(\n    path, description, filename, arguments=\"\", workdir=\"\", iconpath=\"\", iconindex=0\n):\n    import pythoncom\n    from win32com.shell import shell\n    ilink = pythoncom.CoCreateInstance(\n        shell.CLSID_ShellLink,\n        None,\n        pythoncom.CLSCTX_INPROC_SERVER,\n        shell.IID_IShellLink,",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "get_special_folder_path",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def get_special_folder_path(path_name):\n    from win32com.shell import shell, shellcon\n    for maybe in \"\"\"\n        CSIDL_COMMON_STARTMENU CSIDL_STARTMENU CSIDL_COMMON_APPDATA\n        CSIDL_LOCAL_APPDATA CSIDL_APPDATA CSIDL_COMMON_DESKTOPDIRECTORY\n        CSIDL_DESKTOPDIRECTORY CSIDL_COMMON_STARTUP CSIDL_STARTUP\n        CSIDL_COMMON_PROGRAMS CSIDL_PROGRAMS CSIDL_PROGRAM_FILES_COMMON\n        CSIDL_PROGRAM_FILES CSIDL_FONTS\"\"\".split():\n        if maybe == path_name:\n            csidl = getattr(shellcon, maybe)",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "CopyTo",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def CopyTo(desc, src, dest):\n    import win32api\n    import win32con\n    while 1:\n        try:\n            win32api.CopyFile(src, dest, 0)\n            return\n        except win32api.error as details:\n            if details.winerror == 5:  # access denied - user not admin.\n                raise",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "LoadSystemModule",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def LoadSystemModule(lib_dir, modname):\n    # See if this is a debug build.\n    import importlib.machinery\n    import importlib.util\n    suffix = \"_d\" if \"_d.pyd\" in importlib.machinery.EXTENSION_SUFFIXES else \"\"\n    filename = \"%s%d%d%s.dll\" % (\n        modname,\n        sys.version_info.major,\n        sys.version_info.minor,\n        suffix,",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "SetPyKeyVal",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def SetPyKeyVal(key_name, value_name, value):\n    root_hkey = get_root_hkey()\n    root_key = winreg.OpenKey(root_hkey, root_key_name)\n    try:\n        my_key = winreg.CreateKey(root_key, key_name)\n        try:\n            winreg.SetValueEx(my_key, value_name, 0, winreg.REG_SZ, value)\n            if verbose:\n                print(f\"-> {root_key_name}\\\\{key_name}[{value_name}]={value!r}\")\n        finally:",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "UnsetPyKeyVal",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def UnsetPyKeyVal(key_name, value_name, delete_key=False):\n    root_hkey = get_root_hkey()\n    root_key = winreg.OpenKey(root_hkey, root_key_name)\n    try:\n        my_key = winreg.OpenKey(root_key, key_name, 0, winreg.KEY_SET_VALUE)\n        try:\n            winreg.DeleteValue(my_key, value_name)\n            if verbose:\n                print(f\"-> DELETE {root_key_name}\\\\{key_name}[{value_name}]\")\n        finally:",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "RegisterCOMObjects",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def RegisterCOMObjects(register=True):\n    import win32com.server.register\n    if register:\n        func = win32com.server.register.RegisterClasses\n    else:\n        func = win32com.server.register.UnregisterClasses\n    flags = {}\n    if not verbose:\n        flags[\"quiet\"] = 1\n    for module, klass_name in com_modules:",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "RegisterHelpFile",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def RegisterHelpFile(register=True, lib_dir=None):\n    if lib_dir is None:\n        lib_dir = sysconfig.get_paths()[\"platlib\"]\n    if register:\n        # Register the .chm help file.\n        chm_file = os.path.join(lib_dir, \"PyWin32.chm\")\n        if os.path.isfile(chm_file):\n            # This isn't recursive, so if 'Help' doesn't exist, we croak\n            SetPyKeyVal(\"Help\", None, None)\n            SetPyKeyVal(\"Help\\\\Pythonwin Reference\", None, chm_file)",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "RegisterPythonwin",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def RegisterPythonwin(register=True, lib_dir=None):\n    \"\"\"Add (or remove) Pythonwin to context menu for python scripts.\n    ??? Should probably also add Edit command for pys files also.\n    Also need to remove these keys on uninstall, but there's no function\n    to add registry entries to uninstall log ???\n    \"\"\"\n    import os\n    if lib_dir is None:\n        lib_dir = sysconfig.get_paths()[\"platlib\"]\n    classes_root = get_root_hkey()",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "get_shortcuts_folder",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def get_shortcuts_folder():\n    if get_root_hkey() == winreg.HKEY_LOCAL_MACHINE:\n        try:\n            fldr = get_special_folder_path(\"CSIDL_COMMON_PROGRAMS\")\n        except OSError:\n            # No CSIDL_COMMON_PROGRAMS on this platform\n            fldr = get_special_folder_path(\"CSIDL_PROGRAMS\")\n    else:\n        # non-admin install - always goes in this user's start menu.\n        fldr = get_special_folder_path(\"CSIDL_PROGRAMS\")",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "get_system_dir",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def get_system_dir():\n    import win32api  # we assume this exists.\n    try:\n        import pythoncom\n        import win32process\n        from win32com.shell import shell, shellcon\n        try:\n            if win32process.IsWow64Process():\n                return shell.SHGetSpecialFolderPath(0, shellcon.CSIDL_SYSTEMX86)\n            return shell.SHGetSpecialFolderPath(0, shellcon.CSIDL_SYSTEM)",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "fixup_dbi",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def fixup_dbi():\n    # We used to have a dbi.pyd with our .pyd files, but now have a .py file.\n    # If the user didn't uninstall, they will find the .pyd which will cause\n    # problems - so handle that.\n    import win32api\n    import win32con\n    pyd_name = os.path.join(os.path.dirname(win32api.__file__), \"dbi.pyd\")\n    pyd_d_name = os.path.join(os.path.dirname(win32api.__file__), \"dbi_d.pyd\")\n    py_name = os.path.join(os.path.dirname(win32con.__file__), \"dbi.py\")\n    for this_pyd in (pyd_name, pyd_d_name):",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "install",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def install(lib_dir):\n    import traceback\n    # The .pth file is now installed as a regular file.\n    # Create the .pth file in the site-packages dir, and use only relative paths\n    # We used to write a .pth directly to sys.prefix - clobber it.\n    if os.path.isfile(os.path.join(sys.prefix, \"pywin32.pth\")):\n        os.unlink(os.path.join(sys.prefix, \"pywin32.pth\"))\n    # The .pth may be new and therefore not loaded in this session.\n    # Setup the paths just in case.\n    for name in \"win32 win32\\\\lib Pythonwin\".split():",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "uninstall",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def uninstall(lib_dir):\n    # First ensure our system modules are loaded from pywin32_system, so\n    # we can remove the ones we copied...\n    LoadSystemModule(lib_dir, \"pywintypes\")\n    LoadSystemModule(lib_dir, \"pythoncom\")\n    try:\n        RegisterCOMObjects(False)\n    except Exception as why:\n        print(f\"Failed to unregister COM objects: {why}\")\n    try:",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "verify_destination",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def verify_destination(location: str) -> str:\n    location = os.path.abspath(location)\n    if not os.path.isdir(location):\n        raise argparse.ArgumentTypeError(\n            f'Path \"{location}\" is not an existing directory!'\n        )\n    return location\ndef main():\n    parser = argparse.ArgumentParser(\n        formatter_class=argparse.RawDescriptionHelpFormatter,",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "main",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "def main():\n    parser = argparse.ArgumentParser(\n        formatter_class=argparse.RawDescriptionHelpFormatter,\n        description=\"\"\"A post-install script for the pywin32 extensions.\n    * Typical usage:\n    > python -m pywin32_postinstall -install\n    * or (shorter but you don't have control over which python environment is used)\n    > pywin32_postinstall -install\n    You need to execute this script, with a '-install' parameter,\n    to ensure the environment is setup correctly to install COM objects, services, etc.",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "tee_f",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "tee_f = open(\n    os.path.join(\n        tempfile.gettempdir(),  # Send output somewhere so it can be found if necessary...\n        \"pywin32_postinstall.log\",\n    ),\n    \"w\",\n)\nclass Tee:\n    def __init__(self, file):\n        self.f = file",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "sys.stderr",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "sys.stderr = Tee(sys.stderr)\nsys.stdout = Tee(sys.stdout)\ncom_modules = [\n    # module_name,                      class_names\n    (\"win32com.servers.interp\", \"Interpreter\"),\n    (\"win32com.servers.dictionary\", \"DictionaryPolicy\"),\n    (\"win32com.axscript.client.pyscript\", \"PyScript\"),\n]\n# Is this a 'silent' install - ie, avoid all dialogs.\n# Different than 'verbose'",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "sys.stdout",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "sys.stdout = Tee(sys.stdout)\ncom_modules = [\n    # module_name,                      class_names\n    (\"win32com.servers.interp\", \"Interpreter\"),\n    (\"win32com.servers.dictionary\", \"DictionaryPolicy\"),\n    (\"win32com.axscript.client.pyscript\", \"PyScript\"),\n]\n# Is this a 'silent' install - ie, avoid all dialogs.\n# Different than 'verbose'\nsilent = 0",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "com_modules",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "com_modules = [\n    # module_name,                      class_names\n    (\"win32com.servers.interp\", \"Interpreter\"),\n    (\"win32com.servers.dictionary\", \"DictionaryPolicy\"),\n    (\"win32com.axscript.client.pyscript\", \"PyScript\"),\n]\n# Is this a 'silent' install - ie, avoid all dialogs.\n# Different than 'verbose'\nsilent = 0\n# Verbosity of output messages.",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "silent",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "silent = 0\n# Verbosity of output messages.\nverbose = 1\nroot_key_name = \"Software\\\\Python\\\\PythonCore\\\\\" + sys.winver\ndef get_root_hkey():\n    try:\n        winreg.OpenKey(\n            winreg.HKEY_LOCAL_MACHINE, root_key_name, 0, winreg.KEY_CREATE_SUB_KEY\n        )\n        return winreg.HKEY_LOCAL_MACHINE",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "verbose",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "verbose = 1\nroot_key_name = \"Software\\\\Python\\\\PythonCore\\\\\" + sys.winver\ndef get_root_hkey():\n    try:\n        winreg.OpenKey(\n            winreg.HKEY_LOCAL_MACHINE, root_key_name, 0, winreg.KEY_CREATE_SUB_KEY\n        )\n        return winreg.HKEY_LOCAL_MACHINE\n    except OSError:\n        # Either not exist, or no permissions to create subkey means",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "root_key_name",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_postinstall",
+        "description": "venv.Scripts.pywin32_postinstall",
+        "peekOfCode": "root_key_name = \"Software\\\\Python\\\\PythonCore\\\\\" + sys.winver\ndef get_root_hkey():\n    try:\n        winreg.OpenKey(\n            winreg.HKEY_LOCAL_MACHINE, root_key_name, 0, winreg.KEY_CREATE_SUB_KEY\n        )\n        return winreg.HKEY_LOCAL_MACHINE\n    except OSError:\n        # Either not exist, or no permissions to create subkey means\n        # must be HKCU",
+        "detail": "venv.Scripts.pywin32_postinstall",
+        "documentation": {}
+    },
+    {
+        "label": "run_test",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_testall",
+        "description": "venv.Scripts.pywin32_testall",
+        "peekOfCode": "def run_test(script, cmdline_extras):\n    dirname, scriptname = os.path.split(script)\n    # some tests prefer to be run from their directory.\n    cmd = [sys.executable, \"-u\", scriptname] + cmdline_extras\n    print(\"--- Running '%s' ---\" % script)\n    sys.stdout.flush()\n    result = subprocess.run(cmd, check=False, cwd=dirname)\n    print(f\"*** Test script '{script}' exited with {result.returncode}\")\n    sys.stdout.flush()\n    if result.returncode:",
+        "detail": "venv.Scripts.pywin32_testall",
+        "documentation": {}
+    },
+    {
+        "label": "find_and_run",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_testall",
+        "description": "venv.Scripts.pywin32_testall",
+        "peekOfCode": "def find_and_run(possible_locations, extras):\n    for maybe in possible_locations:\n        if os.path.isfile(maybe):\n            run_test(maybe, extras)\n            break\n    else:\n        raise RuntimeError(\n            \"Failed to locate a test script in one of %s\" % possible_locations\n        )\ndef main():",
+        "detail": "venv.Scripts.pywin32_testall",
+        "documentation": {}
+    },
+    {
+        "label": "main",
+        "kind": 2,
+        "importPath": "venv.Scripts.pywin32_testall",
+        "description": "venv.Scripts.pywin32_testall",
+        "peekOfCode": "def main():\n    import argparse\n    code_directories = [project_root] + site_packages\n    parser = argparse.ArgumentParser(\n        description=\"A script to trigger tests in all subprojects of PyWin32.\"\n    )\n    parser.add_argument(\n        \"-no-user-interaction\",\n        default=False,\n        action=\"store_true\",",
+        "detail": "venv.Scripts.pywin32_testall",
+        "documentation": {}
+    },
+    {
+        "label": "project_root",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_testall",
+        "description": "venv.Scripts.pywin32_testall",
+        "peekOfCode": "project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))\nsite_packages = [site.getusersitepackages()] + site.getsitepackages()\nfailures = []\n# Run a test using subprocess and wait for the result.\n# If we get an returncode != 0, we know that there was an error, but we don't\n# abort immediately - we run as many tests as we can.\ndef run_test(script, cmdline_extras):\n    dirname, scriptname = os.path.split(script)\n    # some tests prefer to be run from their directory.\n    cmd = [sys.executable, \"-u\", scriptname] + cmdline_extras",
+        "detail": "venv.Scripts.pywin32_testall",
+        "documentation": {}
+    },
+    {
+        "label": "site_packages",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_testall",
+        "description": "venv.Scripts.pywin32_testall",
+        "peekOfCode": "site_packages = [site.getusersitepackages()] + site.getsitepackages()\nfailures = []\n# Run a test using subprocess and wait for the result.\n# If we get an returncode != 0, we know that there was an error, but we don't\n# abort immediately - we run as many tests as we can.\ndef run_test(script, cmdline_extras):\n    dirname, scriptname = os.path.split(script)\n    # some tests prefer to be run from their directory.\n    cmd = [sys.executable, \"-u\", scriptname] + cmdline_extras\n    print(\"--- Running '%s' ---\" % script)",
+        "detail": "venv.Scripts.pywin32_testall",
+        "documentation": {}
+    },
+    {
+        "label": "failures",
+        "kind": 5,
+        "importPath": "venv.Scripts.pywin32_testall",
+        "description": "venv.Scripts.pywin32_testall",
+        "peekOfCode": "failures = []\n# Run a test using subprocess and wait for the result.\n# If we get an returncode != 0, we know that there was an error, but we don't\n# abort immediately - we run as many tests as we can.\ndef run_test(script, cmdline_extras):\n    dirname, scriptname = os.path.split(script)\n    # some tests prefer to be run from their directory.\n    cmd = [sys.executable, \"-u\", scriptname] + cmdline_extras\n    print(\"--- Running '%s' ---\" % script)\n    sys.stdout.flush()",
+        "detail": "venv.Scripts.pywin32_testall",
+        "documentation": {}
+    },
+    {
+        "label": "print_menu",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def print_menu():\n    print(\"\\n=============================================\")\n    print(\"      UNIVERSAL RAG SYSTEM (Qdrant MVP)      \")\n    print(\"=============================================\")\n    print(\"1. [1] Ingest Web URL\")\n    print(\"2. [2] Ingest Local Folder/File\")\n    print(\"3. [3] Chat / Q&A\")\n    print(\"4. [4] Cek Status Index\")\n    print(\"5. [5] Re-Index / Clear Database (DANGER)\")\n    print(\"6. [0] Exit\")",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "main",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def main():\n    try:\n        # 1. Initialize Vector Store (includes Strict Dimension Checking)\n        print(\"Initializing Vector Store...\")\n        vector_store = initialize_vector_store()\n        print(\"Initialization Successful.\")\n    except Exception as e:\n        print(f\"\\nCRITICAL ERROR INITIALIZING SYSTEM:\\n{e}\")\n        sys.exit(1)\n    while True:",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "logger = logging.getLogger(__name__)\ndef print_menu():\n    print(\"\\n=============================================\")\n    print(\"      UNIVERSAL RAG SYSTEM (Qdrant MVP)      \")\n    print(\"=============================================\")\n    print(\"1. [1] Ingest Web URL\")\n    print(\"2. [2] Ingest Local Folder/File\")\n    print(\"3. [3] Chat / Q&A\")\n    print(\"4. [4] Cek Status Index\")\n    print(\"5. [5] Re-Index / Clear Database (DANGER)\")",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "migrate_scenario_a",
+        "kind": 2,
+        "importPath": "migrate",
+        "description": "migrate",
+        "peekOfCode": "def migrate_scenario_a(old_client_url: str, old_collection: str):\n    \"\"\"\n    Skenario A: Pindah Server Database (Model Embedding Tetap Sama).\n    Transfers vectors and payload without re-embedding.\n    \"\"\"\n    logger.info(f\"--- MIGRATION SCENARIO A ---\")\n    # 1. Connect to old client\n    old_client = QdrantClient(url=old_client_url)\n    # 2. Connect to new client (current config)\n    new_client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)",
+        "detail": "migrate",
+        "documentation": {}
+    },
+    {
+        "label": "migrate_scenario_b",
+        "kind": 2,
+        "importPath": "migrate",
+        "description": "migrate",
+        "peekOfCode": "def migrate_scenario_b(old_client_url: str, old_collection: str):\n    \"\"\"\n    Skenario B: Ganti Model Embedding (Re-Indexing Wajib).\n    Pulls text payload from old DB, re-embeds, and saves to new DB.\n    \"\"\"\n    logger.info(f\"--- MIGRATION SCENARIO B (Re-Embed) ---\")\n    old_client = QdrantClient(url=old_client_url)\n    # Needs to go through LangChain vectorstore implementation for convenience\n    from src.vector_store import initialize_vector_store\n    try:",
+        "detail": "migrate",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "migrate",
+        "description": "migrate",
+        "peekOfCode": "logger = logging.getLogger(__name__)\ndef migrate_scenario_a(old_client_url: str, old_collection: str):\n    \"\"\"\n    Skenario A: Pindah Server Database (Model Embedding Tetap Sama).\n    Transfers vectors and payload without re-embedding.\n    \"\"\"\n    logger.info(f\"--- MIGRATION SCENARIO A ---\")\n    # 1. Connect to old client\n    old_client = QdrantClient(url=old_client_url)\n    # 2. Connect to new client (current config)",
+        "detail": "migrate",
+        "documentation": {}
+    }
+]

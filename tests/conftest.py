@@ -1,5 +1,6 @@
 import pytest
 import os
+import importlib
 from unittest.mock import patch
 
 
@@ -8,6 +9,8 @@ def mock_env_vars():
     """
     Ensure all tests run with a consistent, isolated environment.
     This prevents local .env files from breaking tests unpredictably.
+    We must reload src.config after patching os.environ because
+    Config class attributes are evaluated at import time.
     """
     env_vars = {
         "EMBEDDER_BASE_URL": "https://api.openai.com/v1",
@@ -29,4 +32,12 @@ def mock_env_vars():
 
     with patch.dict(os.environ, env_vars, clear=True):
         with patch("dotenv.load_dotenv"):
+            # Reload config so it picks up the patched env vars
+            import src.config
+
+            importlib.reload(src.config)
+            # Reload vector_store so it picks up the reloaded config
+            import src.vector_store
+
+            importlib.reload(src.vector_store)
             yield

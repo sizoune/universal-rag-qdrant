@@ -1,6 +1,6 @@
 from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_core.embeddings import Embeddings
 from src.config import config
 import logging
@@ -29,8 +29,11 @@ def get_embedder() -> Embeddings:
         return GoogleGenerativeAIEmbeddings(model=model_name, google_api_key=api_key)
     elif (
         base_url
-        and ("localhost" in base_url or "127.0.0.1" in base_url)
-        and "ollama" not in base_url.lower()
+        and (
+            "localhost" in base_url
+            or "127.0.0.1" in base_url
+            or "ollama" in base_url.lower()
+        )
         and not api_key
     ):
         # Assuming Ollama if local and no API key (can be customized)
