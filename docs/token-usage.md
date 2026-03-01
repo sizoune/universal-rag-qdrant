@@ -202,21 +202,34 @@ AI: Berdasarkan konteks yang diberikan, SaaS (Software as a Service)
 
 ## Strategi Menghemat Token
 
-### 1. Hash-Based Caching (Sudah Built-in)
+### 1. Hash-Based Caching + Persistent Cache (Sudah Built-in)
 ```
 File A.pdf → SHA-256 hash → sudah ada di cache?
   Ya  → SKIP (0 token terpakai)
   Tidak → proses embedding (250 token/chunk)
-```
-File yang **tidak berubah** tidak akan diproses ulang — menghemat biaya signifikan saat re-indexing.
 
-### 2. Smart Chunking (Sudah Built-in)
+Web URL → SHA-256(konten) → sudah ada di cache?
+  Ya  → SKIP (0 token terpakai)
+  Tidak → scrape → embed → simpan hash
+```
+Cache disimpan di `.cache/ingestion_hashes.json` — **persisten**, tidak hilang saat restart.
+
+### 2. Deduplication (Sudah Built-in)
+```
+Ingest URL yang sama 2x?
+  → Sistem hapus chunk lama dari Qdrant (by source metadata)
+  → Insert chunk baru
+  → Hasil: data terupdate, bukan duplikasi
+```
+Menghemat ruang database dan menjaga akurasi pencarian.
+
+### 3. Smart Chunking (Sudah Built-in)
 ```
 chunk_size = 1000     # Tidak terlalu besar (akurasi tinggi)
 chunk_overlap = 100   # Tidak terlalu banyak (hemat token)
 ```
 
-### 3. Score Threshold (Sudah Built-in)
+### 4. Score Threshold (Sudah Built-in)
 ```env
 SEARCH_SCORE_THRESHOLD=0.7  # Hanya chunk dengan skor > 0.7 yang dikirim ke LLM
 MAX_SEARCH_RESULTS=4        # Maksimal 4 chunk (kontrol pemakaian token)
@@ -224,14 +237,14 @@ MAX_SEARCH_RESULTS=4        # Maksimal 4 chunk (kontrol pemakaian token)
 
 Semakin tinggi threshold → semakin sedikit chunk → semakin hemat token, tapi jawaban mungkin kurang lengkap.
 
-### 4. Memory Window (Sudah Built-in)
+### 5. Memory Window (Sudah Built-in)
 ```env
 MEMORY_WINDOW_SIZE=5  # Hanya simpan 5 turn terakhir
 ```
 
 Mencegah riwayat chat membengkak yang menyebabkan token LLM meningkat eksponensial.
 
-### 5. Gunakan Ollama (Rekomendasi untuk Budget Nol)
+### 6. Gunakan Ollama (Rekomendasi untuk Budget Nol)
 ```env
 # Embedding gratis + LLM gratis = $0 total
 EMBEDDER_BASE_URL="http://localhost:11434"

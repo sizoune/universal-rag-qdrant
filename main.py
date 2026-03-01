@@ -1,7 +1,12 @@
 import sys
 import argparse
 import logging
-from src.vector_store import initialize_vector_store, get_db_stats, clear_database
+from src.vector_store import (
+    initialize_vector_store,
+    get_db_stats,
+    clear_database,
+    delete_by_source,
+)
 from src.ingestion import parse_web_url, process_directory
 from src.chat import chat_interface
 from src.config import config
@@ -39,13 +44,20 @@ def init_system():
 
 
 def do_ingest_web(vector_store, url):
-    """Ingest a web URL into the vector store."""
+    """Ingest a web URL into the vector store (with dedup)."""
     if not url:
         url = input("Masukkan URL Web: ").strip()
     if url:
-        docs = parse_web_url(url)
+        docs, changed = parse_web_url(url)
+        if not changed:
+            print("Content unchanged (cached). Skipping ingestion.")
+            return
         if docs:
-            print(f"Adding {len(docs)} chunks to Qdrant...")
+            # Delete old chunks from this URL first
+            deleted = delete_by_source(url)
+            if deleted:
+                print(f"Removed {deleted} old chunks for this URL.")
+            print(f"Adding {len(docs)} new chunks to Qdrant...")
             vector_store.add_documents(docs)
             print("Ingestion selesai.")
         else:
@@ -53,19 +65,27 @@ def do_ingest_web(vector_store, url):
 
 
 def do_ingest_file(vector_store, path):
-    """Ingest a local directory/file into the vector store."""
+    """Ingest a local directory/file into the vector store (with dedup)."""
     if not path:
         path = input("Masukkan Path Direktori/File Lokal: ").strip()
     if path:
-        docs = process_directory(path)
+        docs, changed_sources = process_directory(path)
         if docs:
+            # Delete old chunks for each changed source
+            total_deleted = 0
+            for source in changed_sources:
+                total_deleted += delete_by_source(source)
+            if total_deleted:
+                print(f"Removed {total_deleted} old chunks from changed files.")
             print(
-                f"Adding {len(docs)} chunks to Qdrant (Batch Size: {config.EMBEDDING_BATCH_SIZE})..."
+                f"Adding {len(docs)} new chunks to Qdrant (Batch Size: {config.EMBEDDING_BATCH_SIZE})..."
             )
             vector_store.add_documents(docs)
             print("Ingestion selesai.")
         else:
-            print("Tidak ada dokumen baru yang diproses (atau path salah).")
+            print(
+                "Tidak ada dokumen baru yang diproses (semua file unchanged atau path salah)."
+            )
 
 
 def do_status():

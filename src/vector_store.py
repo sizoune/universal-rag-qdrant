@@ -102,3 +102,52 @@ def clear_database():
     except Exception as e:
         logger.error(f"Failed to delete collection: {e}")
         return False
+
+
+def delete_by_source(source: str) -> int:
+    """Delete all points in Qdrant that match the given source metadata.
+    Returns the number of points deleted."""
+    client = get_qdrant_client()
+    collection_name = config.QDRANT_COLLECTION_NAME
+
+    try:
+        client.get_collection(collection_name)
+    except Exception:
+        return 0
+
+    # Scroll through all points matching this source
+    point_ids = []
+    offset = None
+    while True:
+        records, next_offset = client.scroll(
+            collection_name=collection_name,
+            scroll_filter=rest.Filter(
+                must=[
+                    rest.FieldCondition(
+                        key="metadata.source",
+                        match=rest.MatchValue(value=source),
+                    )
+                ]
+            ),
+            limit=100,
+            with_payload=False,
+            with_vectors=False,
+            offset=offset,
+        )
+
+        if not records:
+            break
+
+        point_ids.extend([record.id for record in records])
+        offset = next_offset
+        if offset is None:
+            break
+
+    if point_ids:
+        client.delete(
+            collection_name=collection_name,
+            points_selector=rest.PointIdsList(points=point_ids),
+        )
+        logger.info(f"Deleted {len(point_ids)} old points for source: {source}")
+
+    return len(point_ids)

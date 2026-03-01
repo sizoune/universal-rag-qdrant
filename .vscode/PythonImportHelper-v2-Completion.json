@@ -1,5 +1,41 @@
 [
     {
+        "label": "hashlib",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "hashlib",
+        "description": "hashlib",
+        "detail": "hashlib",
+        "documentation": {}
+    },
+    {
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "logging",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "logging",
+        "description": "logging",
+        "detail": "logging",
+        "documentation": {}
+    },
+    {
         "label": "create_retrieval_chain",
         "importPath": "langchain_classic.chains",
         "description": "langchain_classic.chains",
@@ -168,24 +204,6 @@
         "documentation": {}
     },
     {
-        "label": "logging",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "logging",
-        "description": "logging",
-        "detail": "logging",
-        "documentation": {}
-    },
-    {
-        "label": "os",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "os",
-        "description": "os",
-        "detail": "os",
-        "documentation": {}
-    },
-    {
         "label": "load_dotenv",
         "importPath": "dotenv",
         "description": "dotenv",
@@ -259,14 +277,6 @@
         "documentation": {}
     },
     {
-        "label": "WebBaseLoader",
-        "importPath": "langchain_community.document_loaders",
-        "description": "langchain_community.document_loaders",
-        "isExtraImport": true,
-        "detail": "langchain_community.document_loaders",
-        "documentation": {}
-    },
-    {
         "label": "RecursiveCharacterTextSplitter",
         "importPath": "langchain_text_splitters",
         "description": "langchain_text_splitters",
@@ -315,12 +325,27 @@
         "documentation": {}
     },
     {
-        "label": "hashlib",
-        "kind": 6,
+        "label": "load_cache",
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
         "isExtraImport": true,
-        "importPath": "hashlib",
-        "description": "hashlib",
-        "detail": "hashlib",
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "save_cache",
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "isExtraImport": true,
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "get_content_hash",
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "isExtraImport": true,
+        "detail": "src.cache_store",
         "documentation": {}
     },
     {
@@ -575,6 +600,14 @@
         "documentation": {}
     },
     {
+        "label": "delete_by_source",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
         "label": "parse_web_url",
         "importPath": "src.ingestion",
         "description": "src.ingestion",
@@ -595,6 +628,78 @@
         "importPath": "src.chat",
         "description": "src.chat",
         "isExtraImport": true,
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "load_cache",
+        "kind": 2,
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "peekOfCode": "def load_cache() -> dict:\n    \"\"\"Load the persistent hash cache from disk.\"\"\"\n    try:\n        if os.path.exists(CACHE_FILE):\n            with open(CACHE_FILE, \"r\", encoding=\"utf-8\") as f:\n                return json.load(f)\n    except (json.JSONDecodeError, IOError) as e:\n        logger.warning(f\"Could not load cache, starting fresh: {e}\")\n    return {}\ndef save_cache(cache: dict):",
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "save_cache",
+        "kind": 2,
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "peekOfCode": "def save_cache(cache: dict):\n    \"\"\"Save the hash cache to disk.\"\"\"\n    _ensure_cache_dir()\n    try:\n        with open(CACHE_FILE, \"w\", encoding=\"utf-8\") as f:\n            json.dump(cache, f, indent=2, ensure_ascii=False)\n    except IOError as e:\n        logger.error(f\"Failed to save cache: {e}\")\ndef get_content_hash(text: str) -> str:\n    \"\"\"Compute SHA-256 hash of text content (for web URL dedup).\"\"\"",
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "get_content_hash",
+        "kind": 2,
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "peekOfCode": "def get_content_hash(text: str) -> str:\n    \"\"\"Compute SHA-256 hash of text content (for web URL dedup).\"\"\"\n    return hashlib.sha256(text.encode(\"utf-8\")).hexdigest()",
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "peekOfCode": "logger = logging.getLogger(__name__)\nCACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), \".cache\")\nCACHE_FILE = os.path.join(CACHE_DIR, \"ingestion_hashes.json\")\ndef _ensure_cache_dir():\n    \"\"\"Create .cache directory if it doesn't exist.\"\"\"\n    os.makedirs(CACHE_DIR, exist_ok=True)\ndef load_cache() -> dict:\n    \"\"\"Load the persistent hash cache from disk.\"\"\"\n    try:\n        if os.path.exists(CACHE_FILE):",
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "CACHE_DIR",
+        "kind": 5,
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "peekOfCode": "CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), \".cache\")\nCACHE_FILE = os.path.join(CACHE_DIR, \"ingestion_hashes.json\")\ndef _ensure_cache_dir():\n    \"\"\"Create .cache directory if it doesn't exist.\"\"\"\n    os.makedirs(CACHE_DIR, exist_ok=True)\ndef load_cache() -> dict:\n    \"\"\"Load the persistent hash cache from disk.\"\"\"\n    try:\n        if os.path.exists(CACHE_FILE):\n            with open(CACHE_FILE, \"r\", encoding=\"utf-8\") as f:",
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "CACHE_FILE",
+        "kind": 5,
+        "importPath": "src.cache_store",
+        "description": "src.cache_store",
+        "peekOfCode": "CACHE_FILE = os.path.join(CACHE_DIR, \"ingestion_hashes.json\")\ndef _ensure_cache_dir():\n    \"\"\"Create .cache directory if it doesn't exist.\"\"\"\n    os.makedirs(CACHE_DIR, exist_ok=True)\ndef load_cache() -> dict:\n    \"\"\"Load the persistent hash cache from disk.\"\"\"\n    try:\n        if os.path.exists(CACHE_FILE):\n            with open(CACHE_FILE, \"r\", encoding=\"utf-8\") as f:\n                return json.load(f)",
+        "detail": "src.cache_store",
+        "documentation": {}
+    },
+    {
+        "label": "estimate_tokens",
+        "kind": 2,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "def estimate_tokens(text: str) -> int:\n    \"\"\"Estimate token count. ~1 token per 3 chars for Indonesian, ~4 for English.\"\"\"\n    if not text:\n        return 0\n    return max(1, len(text) // 3)\ndef print_token_usage(context_docs, history, question, answer):\n    \"\"\"Print estimated token usage breakdown.\"\"\"\n    context_text = (\n        \"\\n\".join(doc.page_content for doc in context_docs) if context_docs else \"\"\n    )",
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "print_token_usage",
+        "kind": 2,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "def print_token_usage(context_docs, history, question, answer):\n    \"\"\"Print estimated token usage breakdown.\"\"\"\n    context_text = (\n        \"\\n\".join(doc.page_content for doc in context_docs) if context_docs else \"\"\n    )\n    history_text = \" \".join(msg.content for msg in history) if history else \"\"\n    t_system = estimate_tokens(SYSTEM_PROMPT_TEMPLATE)\n    t_context = estimate_tokens(context_text)\n    t_history = estimate_tokens(history_text)\n    t_question = estimate_tokens(question)",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -630,7 +735,7 @@
         "kind": 5,
         "importPath": "src.chat",
         "description": "src.chat",
-        "peekOfCode": "logger = logging.getLogger(__name__)\n# Basic In-Memory Chat History\nchat_history = []\ndef get_llm():\n    \"\"\"Factory function for Chat LLMs using separate LLM_* config.\"\"\"\n    base_url = config.LLM_BASE_URL\n    model_name = config.LLM_MODEL\n    api_key = config.LLM_API_KEY\n    # Heuristic to determine LLM provider\n    if base_url and \"api.openai.com\" in base_url:",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n# Basic In-Memory Chat History\nchat_history = []\n# System prompt (defined once for token counting)\nSYSTEM_PROMPT_TEMPLATE = (\n    \"You are a helpful AI assistant connected to a knowledge base.\\n\"\n    \"Use the following pieces of retrieved context to answer the user's question.\\n\"\n    \"If the answer is not in the context, just say that you don't know based on the provided documents. \"\n    \"Do not make up information that isn't supported by the context.\\n\\n\"\n    \"Context:\\n{context}\"",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -639,7 +744,16 @@
         "kind": 5,
         "importPath": "src.chat",
         "description": "src.chat",
-        "peekOfCode": "chat_history = []\ndef get_llm():\n    \"\"\"Factory function for Chat LLMs using separate LLM_* config.\"\"\"\n    base_url = config.LLM_BASE_URL\n    model_name = config.LLM_MODEL\n    api_key = config.LLM_API_KEY\n    # Heuristic to determine LLM provider\n    if base_url and \"api.openai.com\" in base_url:\n        logger.info(f\"Using OpenAI Chat with model {model_name}\")\n        return ChatOpenAI(model=model_name, api_key=api_key)",
+        "peekOfCode": "chat_history = []\n# System prompt (defined once for token counting)\nSYSTEM_PROMPT_TEMPLATE = (\n    \"You are a helpful AI assistant connected to a knowledge base.\\n\"\n    \"Use the following pieces of retrieved context to answer the user's question.\\n\"\n    \"If the answer is not in the context, just say that you don't know based on the provided documents. \"\n    \"Do not make up information that isn't supported by the context.\\n\\n\"\n    \"Context:\\n{context}\"\n)\ndef estimate_tokens(text: str) -> int:",
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
+        "label": "SYSTEM_PROMPT_TEMPLATE",
+        "kind": 5,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "SYSTEM_PROMPT_TEMPLATE = (\n    \"You are a helpful AI assistant connected to a knowledge base.\\n\"\n    \"Use the following pieces of retrieved context to answer the user's question.\\n\"\n    \"If the answer is not in the context, just say that you don't know based on the provided documents. \"\n    \"Do not make up information that isn't supported by the context.\\n\\n\"\n    \"Context:\\n{context}\"\n)\ndef estimate_tokens(text: str) -> int:\n    \"\"\"Estimate token count. ~1 token per 3 chars for Indonesian, ~4 for English.\"\"\"\n    if not text:",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -684,7 +798,7 @@
         "kind": 2,
         "importPath": "src.ingestion",
         "description": "src.ingestion",
-        "peekOfCode": "def get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    # Chunking limits as per PRD (100-1000 characters)\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,\n        length_function=len,\n    )\ndef parse_web_url(url: str) -> list[Document]:\n    \"\"\"Scrapes clean text from a web URL using WebBaseLoader and BeautifulSoup.\"\"\"",
+        "peekOfCode": "def get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,\n        length_function=len,\n    )\ndef parse_web_url(url: str) -> tuple[list[Document], bool]:\n    \"\"\"Scrapes clean article text from a web URL.\n    Returns:",
         "detail": "src.ingestion",
         "documentation": {}
     },
@@ -693,7 +807,7 @@
         "kind": 2,
         "importPath": "src.ingestion",
         "description": "src.ingestion",
-        "peekOfCode": "def parse_web_url(url: str) -> list[Document]:\n    \"\"\"Scrapes clean text from a web URL using WebBaseLoader and BeautifulSoup.\"\"\"\n    logger.info(f\"Scraping Web URL: {url}\")\n    try:\n        # Adding user-agent to bypass simple blocking\n        loader = WebBaseLoader(\n            url,\n            header_template={\"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)\"},\n        )\n        docs = loader.load()",
+        "peekOfCode": "def parse_web_url(url: str) -> tuple[list[Document], bool]:\n    \"\"\"Scrapes clean article text from a web URL.\n    Returns:\n        (docs, changed): list of chunked Documents and whether content changed.\n        If content is unchanged from cache, returns ([], False).\n    \"\"\"\n    logger.info(f\"Scraping Web URL: {url}\")\n    try:\n        headers = {\n            \"User-Agent\": os.getenv(",
         "detail": "src.ingestion",
         "documentation": {}
     },
@@ -711,7 +825,7 @@
         "kind": 2,
         "importPath": "src.ingestion",
         "description": "src.ingestion",
-        "peekOfCode": "def process_directory(dir_path: str) -> list[Document]:\n    \"\"\"\n    Scans directory, filters files, checks hashes for incremental updates,\n    and returns chunked LangChain documents for Vector Store ingestion.\n    \"\"\"\n    logger.info(f\"Scanning directory: {dir_path}\")\n    all_chunks = []\n    skipped_count = 0\n    if not os.path.exists(dir_path) or not os.path.isdir(dir_path):\n        logger.error(f\"Directory '{dir_path}' does not exist.\")",
+        "peekOfCode": "def process_directory(dir_path: str) -> tuple[list[Document], list[str]]:\n    \"\"\"Scans directory, filters files, checks hashes for incremental updates,\n    and returns chunked LangChain documents for Vector Store ingestion.\n    Returns:\n        (chunks, changed_sources): list of Documents and list of source paths that changed.\n    \"\"\"\n    logger.info(f\"Scanning directory: {dir_path}\")\n    all_chunks = []\n    changed_sources = []\n    skipped_count = 0",
         "detail": "src.ingestion",
         "documentation": {}
     },
@@ -720,16 +834,7 @@
         "kind": 5,
         "importPath": "src.ingestion",
         "description": "src.ingestion",
-        "peekOfCode": "logger = logging.getLogger(__name__)\n# Very basic dictionary cache for Incremental Updates (in-memory for MVP)\n# In production, this would be a local SQLite DB or Redis\nFILE_HASH_CACHE = {}\ndef get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    # Chunking limits as per PRD (100-1000 characters)\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,",
-        "detail": "src.ingestion",
-        "documentation": {}
-    },
-    {
-        "label": "FILE_HASH_CACHE",
-        "kind": 5,
-        "importPath": "src.ingestion",
-        "description": "src.ingestion",
-        "peekOfCode": "FILE_HASH_CACHE = {}\ndef get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    # Chunking limits as per PRD (100-1000 characters)\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,\n        length_function=len,\n    )\ndef parse_web_url(url: str) -> list[Document]:",
+        "peekOfCode": "logger = logging.getLogger(__name__)\ndef get_text_splitter():\n    \"\"\"Returns a general RecursiveCharacterTextSplitter for chunking.\"\"\"\n    return RecursiveCharacterTextSplitter(\n        chunk_size=1000,\n        chunk_overlap=100,\n        length_function=len,\n    )\ndef parse_web_url(url: str) -> tuple[list[Document], bool]:\n    \"\"\"Scrapes clean article text from a web URL.",
         "detail": "src.ingestion",
         "documentation": {}
     },
@@ -784,6 +889,15 @@
         "importPath": "src.vector_store",
         "description": "src.vector_store",
         "peekOfCode": "def clear_database():\n    \"\"\"Dangerous option: Re-Index/Clear collection.\"\"\"\n    client = get_qdrant_client()\n    try:\n        client.delete_collection(config.QDRANT_COLLECTION_NAME)\n        logger.info(f\"Collection {config.QDRANT_COLLECTION_NAME} deleted successfully.\")\n        return True\n    except Exception as e:\n        logger.error(f\"Failed to delete collection: {e}\")\n        return False",
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "delete_by_source",
+        "kind": 2,
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "peekOfCode": "def delete_by_source(source: str) -> int:\n    \"\"\"Delete all points in Qdrant that match the given source metadata.\n    Returns the number of points deleted.\"\"\"\n    client = get_qdrant_client()\n    collection_name = config.QDRANT_COLLECTION_NAME\n    try:\n        client.get_collection(collection_name)\n    except Exception:\n        return 0\n    # Scroll through all points matching this source",
         "detail": "src.vector_store",
         "documentation": {}
     },
@@ -1229,11 +1343,74 @@
         "documentation": {}
     },
     {
+        "label": "init_system",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def init_system():\n    \"\"\"Initialize the vector store or exit on failure.\"\"\"\n    try:\n        print(\"Initializing Vector Store...\")\n        vector_store = initialize_vector_store()\n        print(\"Initialization Successful.\")\n        return vector_store\n    except Exception as e:\n        print(f\"\\nCRITICAL ERROR INITIALIZING SYSTEM:\\n{e}\")\n        sys.exit(1)",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "do_ingest_web",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def do_ingest_web(vector_store, url):\n    \"\"\"Ingest a web URL into the vector store (with dedup).\"\"\"\n    if not url:\n        url = input(\"Masukkan URL Web: \").strip()\n    if url:\n        docs, changed = parse_web_url(url)\n        if not changed:\n            print(\"Content unchanged (cached). Skipping ingestion.\")\n            return\n        if docs:",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "do_ingest_file",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def do_ingest_file(vector_store, path):\n    \"\"\"Ingest a local directory/file into the vector store (with dedup).\"\"\"\n    if not path:\n        path = input(\"Masukkan Path Direktori/File Lokal: \").strip()\n    if path:\n        docs, changed_sources = process_directory(path)\n        if docs:\n            # Delete old chunks for each changed source\n            total_deleted = 0\n            for source in changed_sources:",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "do_status",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def do_status():\n    \"\"\"Print database status.\"\"\"\n    stats = get_db_stats()\n    print(\"\\n--- Qdrant Status ---\")\n    for k, v in stats.items():\n        print(f\"{k}: {v}\")\ndef do_clear():\n    \"\"\"Clear the entire database (dangerous!).\"\"\"\n    print(\"\\nPERINGATAN: Opsi ini akan menghapus semua data (Collection) saat ini!\")\n    print(",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "do_clear",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def do_clear():\n    \"\"\"Clear the entire database (dangerous!).\"\"\"\n    print(\"\\nPERINGATAN: Opsi ini akan menghapus semua data (Collection) saat ini!\")\n    print(\n        \"Gunakan opsi ini jika Anda telah mengganti Model Embedding (Dimensi berbeda).\"\n    )\n    confirm = input(\"Ketik 'YA' untuk menghapus: \")\n    if confirm == \"YA\":\n        if clear_database():\n            print(",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "interactive_menu",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def interactive_menu(vector_store):\n    \"\"\"Run the interactive menu loop.\"\"\"\n    while True:\n        print_menu()\n        choice = input(\"Pilih menu (0-5): \").strip()\n        if choice == \"1\":\n            do_ingest_web(vector_store, None)\n        elif choice == \"2\":\n            do_ingest_file(vector_store, None)\n        elif choice == \"3\":",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "build_parser",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def build_parser():\n    \"\"\"Build the argparse CLI parser.\"\"\"\n    parser = argparse.ArgumentParser(\n        description=\"Universal RAG System — Ingest, Index, Chat\",\n        formatter_class=argparse.RawDescriptionHelpFormatter,\n        epilog=\"\"\"\nExamples:\n  python main.py                                  # Interactive menu\n  python main.py ingest-web https://example.com   # Ingest a URL\n  python main.py ingest-file ./documents           # Ingest a folder",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
         "label": "main",
         "kind": 2,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "def main():\n    try:\n        # 1. Initialize Vector Store (includes Strict Dimension Checking)\n        print(\"Initializing Vector Store...\")\n        vector_store = initialize_vector_store()\n        print(\"Initialization Successful.\")\n    except Exception as e:\n        print(f\"\\nCRITICAL ERROR INITIALIZING SYSTEM:\\n{e}\")\n        sys.exit(1)\n    while True:",
+        "peekOfCode": "def main():\n    parser = build_parser()\n    args = parser.parse_args()\n    vector_store = init_system()\n    if args.command is None:\n        # No subcommand → interactive menu\n        interactive_menu(vector_store)\n    elif args.command == \"ingest-web\":\n        do_ingest_web(vector_store, args.url)\n    elif args.command == \"ingest-file\":",
         "detail": "main",
         "documentation": {}
     },

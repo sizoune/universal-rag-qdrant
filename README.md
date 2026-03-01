@@ -27,8 +27,9 @@ Platform ini dirancang untuk dapat di-skalakan mulai dari penggunaan personal de
 *   **Qdrant Vector Database dengan *Strict Dimension Checking*:** Secara otomatis memblokir proses ingesti jika model embedding yang baru memiliki dimensi yang berbeda dengan koleksi data yang sudah ada.
 *   **Smart Web Scraper:** Mengekstrak konten utama halaman web secara cerdas (mendukung Wikipedia, artikel HTML5, dan situs umum).
 *   **Smart Document Parsing:** Mendukung format `.pdf`, `.txt`, `.csv`, dan `.docx`.
-*   **Hash-Based Incremental Caching:** Hanya file baru atau yang berubah isinya yang akan diproses ulang, sangat menghemat biaya API.
+*   **Smart Ingestion (Deduplication):** Persistent hash cache + delete-before-insert di Qdrant — ingest ulang URL/file yang sama tidak akan membuat duplikasi, konten yang tidak berubah otomatis di-skip.
 *   **Conversational Memory:** Menyimpan konteks percakapan agar AI memahami pertanyaan lanjutan.
+*   **Token Usage Display:** Estimasi penggunaan token ditampilkan setelah setiap jawaban chat.
 *   **CLI Arguments:** Jalankan perintah langsung tanpa menu interaktif.
 
 ## 📂 Struktur Proyek
@@ -40,14 +41,16 @@ rag-project/
 ├── requirements.txt      # Dependensi Python
 ├── main.py               # Aplikasi utama (CLI + argparse)
 ├── migrate.py            # Utility migrasi data antar database/model
+├── .cache/               # Persistent hash cache (auto-generated, gitignored)
 ├── docs/
 │   ├── architecture.md   # Arsitektur RAG & cara kerja sistem
 │   └── token-usage.md    # Penggunaan token & dampak biaya
 ├── src/
+│   ├── cache_store.py        # Persistent hash cache (JSON)
 │   ├── config.py             # Membaca .env (Embedding, Qdrant, LLM terpisah)
 │   ├── embedding_manager.py  # Factory koneksi OpenAI/Gemini/Ollama embedding
-│   ├── vector_store.py       # Koneksi Qdrant + validasi dimensi
-│   ├── ingestion.py          # Web scraper & pemrosesan dokumen lokal
+│   ├── vector_store.py       # Koneksi Qdrant + validasi dimensi + dedup
+│   ├── ingestion.py          # Web scraper & pemrosesan dokumen (smart update)
 │   ├── chat.py               # RAG chain (retrieval + LLM) & memori
 │   └── utils.py              # Utilitas: hashing, filter file
 └── tests/
