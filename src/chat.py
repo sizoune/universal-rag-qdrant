@@ -13,6 +13,50 @@ logger = logging.getLogger(__name__)
 # Basic In-Memory Chat History
 chat_history = []
 
+# System prompt (defined once for token counting)
+SYSTEM_PROMPT_TEMPLATE = (
+    "You are a helpful AI assistant connected to a knowledge base.\n"
+    "Use the following pieces of retrieved context to answer the user's question.\n"
+    "If the answer is not in the context, just say that you don't know based on the provided documents. "
+    "Do not make up information that isn't supported by the context.\n\n"
+    "Context:\n{context}"
+)
+
+
+def estimate_tokens(text: str) -> int:
+    """Estimate token count. ~1 token per 3 chars for Indonesian, ~4 for English."""
+    if not text:
+        return 0
+    return max(1, len(text) // 3)
+
+
+def print_token_usage(context_docs, history, question, answer):
+    """Print estimated token usage breakdown."""
+    context_text = (
+        "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
+    )
+    history_text = " ".join(msg.content for msg in history) if history else ""
+
+    t_system = estimate_tokens(SYSTEM_PROMPT_TEMPLATE)
+    t_context = estimate_tokens(context_text)
+    t_history = estimate_tokens(history_text)
+    t_question = estimate_tokens(question)
+    t_answer = estimate_tokens(answer)
+    t_input = t_system + t_context + t_history + t_question
+    t_total = t_input + t_answer
+
+    print(f"\n[Token Usage (estimated)]:")
+    print(
+        f"  Context   : ~{t_context:,} tokens ({len(context_docs) if context_docs else 0} chunks)"
+    )
+    print(f"  History   : ~{t_history:,} tokens")
+    print(f"  Question  : ~{t_question:,} tokens")
+    print(f"  System    : ~{t_system:,} tokens")
+    print(f"  ─────────────────────────")
+    print(f"  Input     : ~{t_input:,} tokens")
+    print(f"  Output    : ~{t_answer:,} tokens")
+    print(f"  TOTAL     : ~{t_total:,} tokens")
+
 
 def get_llm():
     """Factory function for Chat LLMs using separate LLM_* config."""
@@ -58,13 +102,7 @@ def get_chat_chain(vector_store):
         },
     )
 
-    system_prompt = (
-        "You are a helpful AI assistant connected to a knowledge base.\n"
-        "Use the following pieces of retrieved context to answer the user's question.\n"
-        "If the answer is not in the context, just say that you don't know based on the provided documents. "
-        "Do not make up information that isn't supported by the context.\n\n"
-        "Context:\n{context}"
-    )
+    system_prompt = SYSTEM_PROMPT_TEMPLATE
 
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -100,13 +138,20 @@ def chat_interface(vector_store):
             answer = response.get("answer", "No answer generated.")
             print(f"AI: {answer}")
 
-            # Optionally print sources
-            sources = response.get("context", [])
-            if sources:
+            # Optionally print sources (deduplicated)
+            context_docs = response.get("context", [])
+            if context_docs:
+                seen = list(
+                    dict.fromkeys(
+                        doc.metadata.get("source", "Unknown") for doc in context_docs
+                    )
+                )
                 print("\n[Sources Used]:")
-                for i, doc in enumerate(sources):
-                    source = doc.metadata.get("source", "Unknown")
+                for i, source in enumerate(seen):
                     print(f"  {i+1}. {source}")
+
+            # Print token usage
+            print_token_usage(context_docs, chat_history, user_input, answer)
 
             # Update Memory Window
             chat_history.extend(

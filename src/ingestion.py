@@ -7,7 +7,6 @@ from langchain_community.document_loaders import (
     TextLoader,
     CSVLoader,
     Docx2txtLoader,
-    WebBaseLoader,
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
@@ -31,24 +30,58 @@ def get_text_splitter():
 
 
 def parse_web_url(url: str) -> list[Document]:
-    """Scrapes clean text from a web URL using WebBaseLoader and BeautifulSoup."""
+    """Scrapes clean article text from a web URL using requests + BeautifulSoup."""
     logger.info(f"Scraping Web URL: {url}")
     try:
-        # Adding user-agent to bypass simple blocking
-        loader = WebBaseLoader(
-            url,
-            header_template={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
-        )
-        docs = loader.load()
+        headers = {
+            "User-Agent": os.getenv(
+                "USER_AGENT",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            )
+        }
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
 
-        # Clean up text
-        for doc in docs:
-            soup = BeautifulSoup(doc.page_content, "html.parser")
-            doc.page_content = soup.get_text(separator=" ", strip=True)
-            doc.metadata["source_type"] = "web"
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Remove noise elements
+        for tag in soup.find_all(
+            ["script", "style", "nav", "footer", "header", "aside", "noscript"]
+        ):
+            tag.decompose()
+
+        # Try to find main content area (ordered by specificity)
+        content = (
+            soup.find("div", class_="mw-parser-output")  # Wikipedia
+            or soup.find("article")  # Semantic HTML5
+            or soup.find("main")  # Semantic HTML5
+            or soup.find("div", id="content")  # Common pattern
+            or soup.find("div", class_="content")  # Common pattern
+            or soup.find("div", id="bodyContent")  # MediaWiki
+            or soup.body  # Fallback to entire body
+            or soup
+        )
+
+        # Extract clean text
+        text = content.get_text(separator="\n", strip=True)
+
+        # Remove excessive blank lines
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        clean_text = "\n".join(lines)
+
+        if not clean_text:
+            logger.warning(f"No content extracted from {url}")
+            return []
+
+        logger.info(f"Extracted {len(clean_text)} characters from {url}")
+
+        doc = Document(
+            page_content=clean_text,
+            metadata={"source": url, "source_type": "web"},
+        )
 
         splitter = get_text_splitter()
-        split_docs = splitter.split_documents(docs)
+        split_docs = splitter.split_documents([doc])
         return split_docs
     except Exception as e:
         logger.error(f"Failed to parse web URL '{url}': {e}")
