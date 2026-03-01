@@ -16,12 +16,9 @@ services:
     container_name: universal_rag_bot
     env_file:
       - .env
-    depends_on:
-      - qdrant
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: "host"
     environment:
-      QDRANT_URL: "http://qdrant:6333"
+      QDRANT_URL: "http://localhost:6333"
     restart: always
     volumes:
       - ./.cache:/app/.cache
