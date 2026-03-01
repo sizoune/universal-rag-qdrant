@@ -41,20 +41,26 @@ class HybridRetriever(BaseRetriever):
             # Check if collection has sparse vectors configured
             collection_info = client.get_collection(collection_name)
             has_sparse = False
-            vectors_config = collection_info.config.params.vectors
-            if isinstance(vectors_config, dict) and "sparse" in vectors_config:
+            sparse_config = getattr(collection_info.config.params, "sparse_vectors", None)
+            if isinstance(sparse_config, dict) and "sparse" in sparse_config:
                 has_sparse = True
+
+            dense_using = getattr(self.vector_store, "vector_name", "dense") or None
 
             if has_sparse:
                 # True hybrid: use prefetch with both dense and sparse
+                dense_prefetch = rest.Prefetch(query=query_vector, limit=self.k * 3)
+                if dense_using:
+                    dense_prefetch = rest.Prefetch(
+                        query=query_vector,
+                        using=dense_using,
+                        limit=self.k * 3,
+                    )
+
                 results = client.query_points(
                     collection_name=collection_name,
                     prefetch=[
-                        rest.Prefetch(
-                            query=query_vector,
-                            using="dense",
-                            limit=self.k * 3,
-                        ),
+                        dense_prefetch,
                         rest.Prefetch(
                             query=rest.SparseVector(
                                 indices=sparse_vector["indices"],
@@ -85,19 +91,33 @@ class HybridRetriever(BaseRetriever):
             documents = []
             for point in results.points:
                 payload = point.payload or {}
+                metadata = {k: v for k, v in payload.items() if k != "page_content"}
+                nested_metadata = metadata.get("metadata")
+                if isinstance(nested_metadata, dict):
+                    # Align with LangChain Qdrant payload style where source metadata
+                    # is stored inside payload["metadata"].
+                    metadata = {**nested_metadata, **{k: v for k, v in metadata.items() if k != "metadata"}}
                 doc = Document(
                     page_content=payload.get("page_content", ""),
-                    metadata={k: v for k, v in payload.items() if k != "page_content"},
+                    metadata=metadata,
                 )
                 doc.metadata["score"] = point.score
                 documents.append(doc)
 
             # Filter by score threshold
-            documents = [
+            filtered_documents = [
                 d
                 for d in documents
                 if d.metadata.get("score", 0) >= self.score_threshold
             ]
+            if filtered_documents:
+                documents = filtered_documents
+            else:
+                logger.info(
+                    "No hybrid docs passed score_threshold=%.3f. Using top-k fallback.",
+                    self.score_threshold,
+                )
+                documents = documents[: self.k]
 
             # Re-rank if enabled
             if is_reranker_enabled() and documents:

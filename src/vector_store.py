@@ -206,21 +206,46 @@ def ingest_documents(documents: list, vector_store) -> None:
         return
 
     import uuid
-    from src.sparse_encoder import encode_sparse
     from src.config import config
 
     client = vector_store.client
     collection_name = config.QDRANT_COLLECTION_NAME
     embedder = vector_store.embeddings
+    collection_info = client.get_collection(collection_name)
+    params = collection_info.config.params
+
+    vectors_config = params.vectors
+    dense_vector_name = ""
+    dense_is_named = False
+
+    if isinstance(vectors_config, dict):
+        dense_is_named = True
+        if "dense" in vectors_config:
+            dense_vector_name = "dense"
+        elif "" in vectors_config:
+            dense_vector_name = ""
+        else:
+            dense_vector_name = next(iter(vectors_config.keys()))
+
+    sparse_vectors_config = getattr(params, "sparse_vectors", None)
+    has_sparse = isinstance(sparse_vectors_config, dict) and "sparse" in sparse_vectors_config
+    use_sparse = has_sparse and dense_is_named
 
     # Compute dense embeddings
     texts = [doc.page_content for doc in documents]
     logger.info(f"Computing dense embeddings for {len(texts)} chunks...")
     dense_embeddings = embedder.embed_documents(texts)
 
-    # Compute sparse embeddings
-    logger.info(f"Computing sparse embeddings for {len(texts)} chunks...")
-    sparse_embeddings = encode_sparse(texts)
+    sparse_embeddings = None
+    if use_sparse:
+        from src.sparse_encoder import encode_sparse
+
+        logger.info(f"Computing sparse embeddings for {len(texts)} chunks...")
+        sparse_embeddings = encode_sparse(texts)
+    elif has_sparse and not dense_is_named:
+        logger.warning(
+            "Sparse vector config detected but dense vector is unnamed; ingesting dense only."
+        )
 
     # Build Qdrant points
     points = []
@@ -228,24 +253,26 @@ def ingest_documents(documents: list, vector_store) -> None:
         point_id = str(uuid.uuid4())
         payload = {"page_content": doc.page_content, "metadata": doc.metadata}
 
-        sparse_vector = sparse_embeddings[i]
+        if dense_is_named:
+            vector_payload = {dense_vector_name: dense_embeddings[i]}
+            if use_sparse and sparse_embeddings is not None:
+                sparse_vector = sparse_embeddings[i]
+                vector_payload["sparse"] = rest.SparseVector(
+                    indices=sparse_vector["indices"], values=sparse_vector["values"]
+                )
+        else:
+            vector_payload = dense_embeddings[i]
 
-        points.append(
-            rest.PointStruct(
-                id=point_id,
-                payload=payload,
-                vector={
-                    "dense": dense_embeddings[i],
-                    "sparse": rest.SparseVector(
-                        indices=sparse_vector["indices"], values=sparse_vector["values"]
-                    ),
-                },
-            )
-        )
+        points.append(rest.PointStruct(id=point_id, payload=payload, vector=vector_payload))
 
     # Upsert in batches
     batch_size = config.EMBEDDING_BATCH_SIZE
     for i in range(0, len(points), batch_size):
         batch_points = points[i : i + batch_size]
         client.upsert(collection_name=collection_name, points=batch_points)
-    logger.info(f"Successfully ingested {len(points)} points (dense+sparse) to Qdrant.")
+    if use_sparse:
+        logger.info(
+            f"Successfully ingested {len(points)} points (dense+sparse) to Qdrant."
+        )
+    else:
+        logger.info(f"Successfully ingested {len(points)} points (dense only) to Qdrant.")

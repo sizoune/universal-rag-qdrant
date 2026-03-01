@@ -23,6 +23,7 @@ from src.vector_store import (
     clear_database,
     delete_by_source,
     ingest_documents,
+    initialize_vector_store,
 )
 from src.chat import get_chat_chain, estimate_tokens, SYSTEM_PROMPT_TEMPLATE
 from src.cache_store import load_cache, save_cache, get_content_hash
@@ -38,6 +39,18 @@ user_histories: dict[int, list] = {}
 # Will be set by start_bot()
 _vector_store = None
 _chain = None
+
+
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Global telegram error handler to avoid unhandled exception noise."""
+    logger.exception("Unhandled Telegram error", exc_info=context.error)
+    try:
+        if isinstance(update, Update) and update.effective_message:
+            await update.effective_message.reply_text(
+                "❌ Terjadi error internal saat memproses request. Coba lagi."
+            )
+    except Exception:
+        logger.exception("Failed to send Telegram error response")
 
 
 def _get_allowed_users() -> set[int]:
@@ -165,11 +178,24 @@ async def cmd_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    global _vector_store, _chain
+
     success = clear_database()
     if success:
         # Clear hash cache too
         save_cache({})
-        await update.message.reply_text("🗑️ Database berhasil dihapus.")
+        try:
+            _vector_store = initialize_vector_store()
+            _chain = get_chat_chain(_vector_store)
+            await update.message.reply_text(
+                "🗑️ Database berhasil dihapus dan collection baru sudah dibuat ulang."
+            )
+        except Exception as e:
+            logger.error(f"Failed to reinitialize collection after clear: {e}")
+            await update.message.reply_text(
+                "⚠️ Database terhapus, tapi gagal membuat ulang collection. "
+                "Restart bot atau cek log server."
+            )
     else:
         await update.message.reply_text("❌ Gagal menghapus database.")
 
@@ -383,6 +409,7 @@ def start_bot(vector_store):
 
     # Chat handler (any text that's not a command)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_chat))
+    app.add_error_handler(on_error)
 
     logger.info("Telegram Bot started in polling mode.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

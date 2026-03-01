@@ -2,6 +2,7 @@ from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.retrievers import BaseRetriever
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
@@ -21,6 +22,26 @@ SYSTEM_PROMPT_TEMPLATE = (
     "Do not make up information that isn't supported by the context.\n\n"
     "Context:\n{context}"
 )
+
+
+class DenseThresholdFallbackRetriever(BaseRetriever):
+    """Dense retriever with score-threshold first, then similarity fallback."""
+
+    threshold_retriever: object
+    similarity_retriever: object
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def _get_relevant_documents(self, query: str, **kwargs):
+        docs = self.threshold_retriever.invoke(query)
+        if docs:
+            return docs
+        logger.info(
+            "No docs passed score_threshold=%.3f. Falling back to top-k similarity.",
+            config.SEARCH_SCORE_THRESHOLD,
+        )
+        return self.similarity_retriever.invoke(query)
 
 
 def estimate_tokens(text: str) -> int:
@@ -109,12 +130,20 @@ def get_chat_chain(vector_store):
         )
     else:
         logger.info("Using DENSE search mode")
-        retriever = vector_store.as_retriever(
+        threshold_retriever = vector_store.as_retriever(
             search_type="similarity_score_threshold",
             search_kwargs={
                 "score_threshold": config.SEARCH_SCORE_THRESHOLD,
                 "k": config.MAX_SEARCH_RESULTS,
             },
+        )
+        similarity_retriever = vector_store.as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": config.MAX_SEARCH_RESULTS},
+        )
+        retriever = DenseThresholdFallbackRetriever(
+            threshold_retriever=threshold_retriever,
+            similarity_retriever=similarity_retriever,
         )
 
     system_prompt = SYSTEM_PROMPT_TEMPLATE

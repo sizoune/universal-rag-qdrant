@@ -100,6 +100,22 @@
         "documentation": {}
     },
     {
+        "label": "BaseRetriever",
+        "importPath": "langchain_core.retrievers",
+        "description": "langchain_core.retrievers",
+        "isExtraImport": true,
+        "detail": "langchain_core.retrievers",
+        "documentation": {}
+    },
+    {
+        "label": "BaseRetriever",
+        "importPath": "langchain_core.retrievers",
+        "description": "langchain_core.retrievers",
+        "isExtraImport": true,
+        "detail": "langchain_core.retrievers",
+        "documentation": {}
+    },
+    {
         "label": "ChatOpenAI",
         "importPath": "langchain_openai",
         "description": "langchain_openai",
@@ -228,6 +244,30 @@
         "documentation": {}
     },
     {
+        "label": "config",
+        "importPath": "src.config",
+        "description": "src.config",
+        "isExtraImport": true,
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "config",
+        "importPath": "src.config",
+        "description": "src.config",
+        "isExtraImport": true,
+        "detail": "src.config",
+        "documentation": {}
+    },
+    {
+        "label": "Document",
+        "importPath": "langchain_core.documents",
+        "description": "langchain_core.documents",
+        "isExtraImport": true,
+        "detail": "langchain_core.documents",
+        "documentation": {}
+    },
+    {
         "label": "Document",
         "importPath": "langchain_core.documents",
         "description": "langchain_core.documents",
@@ -281,6 +321,62 @@
         "description": "langchain_core.embeddings",
         "isExtraImport": true,
         "detail": "langchain_core.embeddings",
+        "documentation": {}
+    },
+    {
+        "label": "models",
+        "importPath": "qdrant_client.http",
+        "description": "qdrant_client.http",
+        "isExtraImport": true,
+        "detail": "qdrant_client.http",
+        "documentation": {}
+    },
+    {
+        "label": "models",
+        "importPath": "qdrant_client.http",
+        "description": "qdrant_client.http",
+        "isExtraImport": true,
+        "detail": "qdrant_client.http",
+        "documentation": {}
+    },
+    {
+        "label": "models",
+        "importPath": "qdrant_client.http",
+        "description": "qdrant_client.http",
+        "isExtraImport": true,
+        "detail": "qdrant_client.http",
+        "documentation": {}
+    },
+    {
+        "label": "models",
+        "importPath": "qdrant_client.http",
+        "description": "qdrant_client.http",
+        "isExtraImport": true,
+        "detail": "qdrant_client.http",
+        "documentation": {}
+    },
+    {
+        "label": "encode_sparse",
+        "importPath": "src.sparse_encoder",
+        "description": "src.sparse_encoder",
+        "isExtraImport": true,
+        "detail": "src.sparse_encoder",
+        "documentation": {}
+    },
+    {
+        "label": "rerank",
+        "importPath": "src.reranker",
+        "description": "src.reranker",
+        "isExtraImport": true,
+        "detail": "src.reranker",
+        "documentation": {}
+    },
+    {
+        "label": "is_reranker_enabled",
+        "importPath": "src.reranker",
+        "description": "src.reranker",
+        "isExtraImport": true,
+        "detail": "src.reranker",
         "documentation": {}
     },
     {
@@ -429,6 +525,14 @@
         "documentation": {}
     },
     {
+        "label": "SparseTextEmbedding",
+        "importPath": "fastembed",
+        "description": "fastembed",
+        "isExtraImport": true,
+        "detail": "fastembed",
+        "documentation": {}
+    },
+    {
         "label": "tempfile",
         "kind": 6,
         "isExtraImport": true,
@@ -566,6 +670,22 @@
         "documentation": {}
     },
     {
+        "label": "ingest_documents",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "initialize_vector_store",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
         "label": "initialize_vector_store",
         "importPath": "src.vector_store",
         "description": "src.vector_store",
@@ -591,6 +711,14 @@
     },
     {
         "label": "delete_by_source",
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "isExtraImport": true,
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "ingest_documents",
         "importPath": "src.vector_store",
         "description": "src.vector_store",
         "isExtraImport": true,
@@ -651,30 +779,6 @@
         "description": "qdrant_client",
         "isExtraImport": true,
         "detail": "qdrant_client",
-        "documentation": {}
-    },
-    {
-        "label": "models",
-        "importPath": "qdrant_client.http",
-        "description": "qdrant_client.http",
-        "isExtraImport": true,
-        "detail": "qdrant_client.http",
-        "documentation": {}
-    },
-    {
-        "label": "models",
-        "importPath": "qdrant_client.http",
-        "description": "qdrant_client.http",
-        "isExtraImport": true,
-        "detail": "qdrant_client.http",
-        "documentation": {}
-    },
-    {
-        "label": "models",
-        "importPath": "qdrant_client.http",
-        "description": "qdrant_client.http",
-        "isExtraImport": true,
-        "detail": "qdrant_client.http",
         "documentation": {}
     },
     {
@@ -902,6 +1006,15 @@
         "documentation": {}
     },
     {
+        "label": "DenseThresholdFallbackRetriever",
+        "kind": 6,
+        "importPath": "src.chat",
+        "description": "src.chat",
+        "peekOfCode": "class DenseThresholdFallbackRetriever(BaseRetriever):\n    \"\"\"Dense retriever with score-threshold first, then similarity fallback.\"\"\"\n    threshold_retriever: object\n    similarity_retriever: object\n    class Config:\n        arbitrary_types_allowed = True\n    def _get_relevant_documents(self, query: str, **kwargs):\n        docs = self.threshold_retriever.invoke(query)\n        if docs:\n            return docs",
+        "detail": "src.chat",
+        "documentation": {}
+    },
+    {
         "label": "estimate_tokens",
         "kind": 2,
         "importPath": "src.chat",
@@ -933,7 +1046,7 @@
         "kind": 2,
         "importPath": "src.chat",
         "description": "src.chat",
-        "peekOfCode": "def get_chat_chain(vector_store):\n    \"\"\"Sets up the retrieval + LLM conversational chain.\"\"\"\n    llm = get_llm()\n    retriever = vector_store.as_retriever(\n        search_type=\"similarity_score_threshold\",\n        search_kwargs={\n            \"score_threshold\": config.SEARCH_SCORE_THRESHOLD,\n            \"k\": config.MAX_SEARCH_RESULTS,\n        },\n    )",
+        "peekOfCode": "def get_chat_chain(vector_store):\n    \"\"\"Sets up the retrieval + LLM conversational chain.\n    Supports dense (default) and hybrid (dense+sparse) search modes,\n    with optional cross-encoder re-ranking.\n    \"\"\"\n    llm = get_llm()\n    search_mode = config.SEARCH_MODE.lower()\n    if search_mode == \"hybrid\":\n        logger.info(\"Using HYBRID search mode (dense + sparse BM25)\")\n        from src.hybrid_retriever import HybridRetriever",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -960,7 +1073,7 @@
         "kind": 5,
         "importPath": "src.chat",
         "description": "src.chat",
-        "peekOfCode": "chat_history = []\n# System prompt (defined once for token counting)\nSYSTEM_PROMPT_TEMPLATE = (\n    \"You are a helpful AI assistant connected to a knowledge base.\\n\"\n    \"Use the following pieces of retrieved context to answer the user's question.\\n\"\n    \"If the answer is not in the context, just say that you don't know based on the provided documents. \"\n    \"Do not make up information that isn't supported by the context.\\n\\n\"\n    \"Context:\\n{context}\"\n)\ndef estimate_tokens(text: str) -> int:",
+        "peekOfCode": "chat_history = []\n# System prompt (defined once for token counting)\nSYSTEM_PROMPT_TEMPLATE = (\n    \"You are a helpful AI assistant connected to a knowledge base.\\n\"\n    \"Use the following pieces of retrieved context to answer the user's question.\\n\"\n    \"If the answer is not in the context, just say that you don't know based on the provided documents. \"\n    \"Do not make up information that isn't supported by the context.\\n\\n\"\n    \"Context:\\n{context}\"\n)\nclass DenseThresholdFallbackRetriever(BaseRetriever):",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -969,7 +1082,7 @@
         "kind": 5,
         "importPath": "src.chat",
         "description": "src.chat",
-        "peekOfCode": "SYSTEM_PROMPT_TEMPLATE = (\n    \"You are a helpful AI assistant connected to a knowledge base.\\n\"\n    \"Use the following pieces of retrieved context to answer the user's question.\\n\"\n    \"If the answer is not in the context, just say that you don't know based on the provided documents. \"\n    \"Do not make up information that isn't supported by the context.\\n\\n\"\n    \"Context:\\n{context}\"\n)\ndef estimate_tokens(text: str) -> int:\n    \"\"\"Estimate token count. ~1 token per 3 chars for Indonesian, ~4 for English.\"\"\"\n    if not text:",
+        "peekOfCode": "SYSTEM_PROMPT_TEMPLATE = (\n    \"You are a helpful AI assistant connected to a knowledge base.\\n\"\n    \"Use the following pieces of retrieved context to answer the user's question.\\n\"\n    \"If the answer is not in the context, just say that you don't know based on the provided documents. \"\n    \"Do not make up information that isn't supported by the context.\\n\\n\"\n    \"Context:\\n{context}\"\n)\nclass DenseThresholdFallbackRetriever(BaseRetriever):\n    \"\"\"Dense retriever with score-threshold first, then similarity fallback.\"\"\"\n    threshold_retriever: object",
         "detail": "src.chat",
         "documentation": {}
     },
@@ -1046,6 +1159,24 @@
         "documentation": {}
     },
     {
+        "label": "HybridRetriever",
+        "kind": 6,
+        "importPath": "src.hybrid_retriever",
+        "description": "src.hybrid_retriever",
+        "peekOfCode": "class HybridRetriever(BaseRetriever):\n    \"\"\"LangChain-compatible retriever using Qdrant hybrid search\n    (dense vector + sparse BM25) with optional cross-encoder re-ranking.\"\"\"\n    vector_store: object  # QdrantVectorStore\n    score_threshold: float = 0.7\n    k: int = 4\n    class Config:\n        arbitrary_types_allowed = True\n    def _get_relevant_documents(self, query: str, **kwargs) -> list[Document]:\n        \"\"\"Execute hybrid search: dense + sparse, then optional re-rank.\"\"\"",
+        "detail": "src.hybrid_retriever",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.hybrid_retriever",
+        "description": "src.hybrid_retriever",
+        "peekOfCode": "logger = logging.getLogger(__name__)\nclass HybridRetriever(BaseRetriever):\n    \"\"\"LangChain-compatible retriever using Qdrant hybrid search\n    (dense vector + sparse BM25) with optional cross-encoder re-ranking.\"\"\"\n    vector_store: object  # QdrantVectorStore\n    score_threshold: float = 0.7\n    k: int = 4\n    class Config:\n        arbitrary_types_allowed = True\n    def _get_relevant_documents(self, query: str, **kwargs) -> list[Document]:",
+        "detail": "src.hybrid_retriever",
+        "documentation": {}
+    },
+    {
         "label": "get_text_splitter",
         "kind": 2,
         "importPath": "src.ingestion",
@@ -1091,6 +1222,87 @@
         "documentation": {}
     },
     {
+        "label": "get_reranker",
+        "kind": 2,
+        "importPath": "src.reranker",
+        "description": "src.reranker",
+        "peekOfCode": "def get_reranker():\n    \"\"\"Get or create a singleton reranker instance.\"\"\"\n    global _reranker\n    if _reranker is None:\n        model_name = getattr(config, \"RERANKER_MODEL\", \"Xenova/ms-marco-MiniLM-L-6-v2\")\n        logger.info(f\"Loading reranker model: {model_name} (first-time download)...\")\n        from fastembed import TextCrossEncoder\n        _reranker = TextCrossEncoder(model_name=model_name)\n        logger.info(\"Reranker model loaded.\")\n    return _reranker",
+        "detail": "src.reranker",
+        "documentation": {}
+    },
+    {
+        "label": "is_reranker_enabled",
+        "kind": 2,
+        "importPath": "src.reranker",
+        "description": "src.reranker",
+        "peekOfCode": "def is_reranker_enabled() -> bool:\n    \"\"\"Check if reranker is enabled via config.\"\"\"\n    enabled = getattr(config, \"RERANKER_ENABLED\", \"false\")\n    return str(enabled).lower() in (\"true\", \"1\", \"yes\")\ndef rerank(query: str, documents: list, top_k: int = None) -> list:\n    \"\"\"Re-rank documents using cross-encoder scoring.\n    Args:\n        query: The search query\n        documents: List of LangChain Documents\n        top_k: Optional limit on returned documents",
+        "detail": "src.reranker",
+        "documentation": {}
+    },
+    {
+        "label": "rerank",
+        "kind": 2,
+        "importPath": "src.reranker",
+        "description": "src.reranker",
+        "peekOfCode": "def rerank(query: str, documents: list, top_k: int = None) -> list:\n    \"\"\"Re-rank documents using cross-encoder scoring.\n    Args:\n        query: The search query\n        documents: List of LangChain Documents\n        top_k: Optional limit on returned documents\n    Returns:\n        Re-ranked list of Documents (highest relevance first)\n    \"\"\"\n    if not documents:",
+        "detail": "src.reranker",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.reranker",
+        "description": "src.reranker",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n_reranker = None\ndef get_reranker():\n    \"\"\"Get or create a singleton reranker instance.\"\"\"\n    global _reranker\n    if _reranker is None:\n        model_name = getattr(config, \"RERANKER_MODEL\", \"Xenova/ms-marco-MiniLM-L-6-v2\")\n        logger.info(f\"Loading reranker model: {model_name} (first-time download)...\")\n        from fastembed import TextCrossEncoder\n        _reranker = TextCrossEncoder(model_name=model_name)",
+        "detail": "src.reranker",
+        "documentation": {}
+    },
+    {
+        "label": "_reranker",
+        "kind": 5,
+        "importPath": "src.reranker",
+        "description": "src.reranker",
+        "peekOfCode": "_reranker = None\ndef get_reranker():\n    \"\"\"Get or create a singleton reranker instance.\"\"\"\n    global _reranker\n    if _reranker is None:\n        model_name = getattr(config, \"RERANKER_MODEL\", \"Xenova/ms-marco-MiniLM-L-6-v2\")\n        logger.info(f\"Loading reranker model: {model_name} (first-time download)...\")\n        from fastembed import TextCrossEncoder\n        _reranker = TextCrossEncoder(model_name=model_name)\n        logger.info(\"Reranker model loaded.\")",
+        "detail": "src.reranker",
+        "documentation": {}
+    },
+    {
+        "label": "get_sparse_encoder",
+        "kind": 2,
+        "importPath": "src.sparse_encoder",
+        "description": "src.sparse_encoder",
+        "peekOfCode": "def get_sparse_encoder() -> SparseTextEmbedding:\n    \"\"\"Get or create a singleton sparse encoder instance.\"\"\"\n    global _model\n    if _model is None:\n        logger.info(\"Loading BM25 sparse encoder (first-time download)...\")\n        _model = SparseTextEmbedding(model_name=\"Qdrant/bm25\")\n        logger.info(\"BM25 sparse encoder loaded.\")\n    return _model\ndef encode_sparse(texts: list[str]) -> list[dict]:\n    \"\"\"Encode texts into sparse vectors for Qdrant.",
+        "detail": "src.sparse_encoder",
+        "documentation": {}
+    },
+    {
+        "label": "encode_sparse",
+        "kind": 2,
+        "importPath": "src.sparse_encoder",
+        "description": "src.sparse_encoder",
+        "peekOfCode": "def encode_sparse(texts: list[str]) -> list[dict]:\n    \"\"\"Encode texts into sparse vectors for Qdrant.\n    Returns list of dicts with 'indices' and 'values' keys,\n    compatible with Qdrant's SparseVector format.\n    \"\"\"\n    encoder = get_sparse_encoder()\n    results = list(encoder.embed(texts))\n    sparse_vectors = []\n    for result in results:\n        sparse_vectors.append(",
+        "detail": "src.sparse_encoder",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "src.sparse_encoder",
+        "description": "src.sparse_encoder",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n_model = None\ndef get_sparse_encoder() -> SparseTextEmbedding:\n    \"\"\"Get or create a singleton sparse encoder instance.\"\"\"\n    global _model\n    if _model is None:\n        logger.info(\"Loading BM25 sparse encoder (first-time download)...\")\n        _model = SparseTextEmbedding(model_name=\"Qdrant/bm25\")\n        logger.info(\"BM25 sparse encoder loaded.\")\n    return _model",
+        "detail": "src.sparse_encoder",
+        "documentation": {}
+    },
+    {
+        "label": "_model",
+        "kind": 5,
+        "importPath": "src.sparse_encoder",
+        "description": "src.sparse_encoder",
+        "peekOfCode": "_model = None\ndef get_sparse_encoder() -> SparseTextEmbedding:\n    \"\"\"Get or create a singleton sparse encoder instance.\"\"\"\n    global _model\n    if _model is None:\n        logger.info(\"Loading BM25 sparse encoder (first-time download)...\")\n        _model = SparseTextEmbedding(model_name=\"Qdrant/bm25\")\n        logger.info(\"BM25 sparse encoder loaded.\")\n    return _model\ndef encode_sparse(texts: list[str]) -> list[dict]:",
+        "detail": "src.sparse_encoder",
+        "documentation": {}
+    },
+    {
         "label": "start_bot",
         "kind": 2,
         "importPath": "src.telegram_bot",
@@ -1104,7 +1316,7 @@
         "kind": 5,
         "importPath": "src.telegram_bot",
         "description": "src.telegram_bot",
-        "peekOfCode": "logger = logging.getLogger(__name__)\n# Per-user chat history\nuser_histories: dict[int, list] = {}\n# Will be set by start_bot()\n_vector_store = None\n_chain = None\ndef _get_allowed_users() -> set[int]:\n    \"\"\"Parse TELEGRAM_ALLOWED_USERS into a set of user IDs.\"\"\"\n    raw = config.TELEGRAM_ALLOWED_USERS.strip()\n    if not raw:",
+        "peekOfCode": "logger = logging.getLogger(__name__)\n# Per-user chat history\nuser_histories: dict[int, list] = {}\n# Will be set by start_bot()\n_vector_store = None\n_chain = None\nasync def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:\n    \"\"\"Global telegram error handler to avoid unhandled exception noise.\"\"\"\n    logger.exception(\"Unhandled Telegram error\", exc_info=context.error)\n    try:",
         "detail": "src.telegram_bot",
         "documentation": {}
     },
@@ -1113,7 +1325,7 @@
         "kind": 5,
         "importPath": "src.telegram_bot",
         "description": "src.telegram_bot",
-        "peekOfCode": "_vector_store = None\n_chain = None\ndef _get_allowed_users() -> set[int]:\n    \"\"\"Parse TELEGRAM_ALLOWED_USERS into a set of user IDs.\"\"\"\n    raw = config.TELEGRAM_ALLOWED_USERS.strip()\n    if not raw:\n        return set()\n    try:\n        return {int(uid.strip()) for uid in raw.split(\",\") if uid.strip()}\n    except ValueError:",
+        "peekOfCode": "_vector_store = None\n_chain = None\nasync def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:\n    \"\"\"Global telegram error handler to avoid unhandled exception noise.\"\"\"\n    logger.exception(\"Unhandled Telegram error\", exc_info=context.error)\n    try:\n        if isinstance(update, Update) and update.effective_message:\n            await update.effective_message.reply_text(\n                \"❌ Terjadi error internal saat memproses request. Coba lagi.\"\n            )",
         "detail": "src.telegram_bot",
         "documentation": {}
     },
@@ -1122,7 +1334,7 @@
         "kind": 5,
         "importPath": "src.telegram_bot",
         "description": "src.telegram_bot",
-        "peekOfCode": "_chain = None\ndef _get_allowed_users() -> set[int]:\n    \"\"\"Parse TELEGRAM_ALLOWED_USERS into a set of user IDs.\"\"\"\n    raw = config.TELEGRAM_ALLOWED_USERS.strip()\n    if not raw:\n        return set()\n    try:\n        return {int(uid.strip()) for uid in raw.split(\",\") if uid.strip()}\n    except ValueError:\n        return set()",
+        "peekOfCode": "_chain = None\nasync def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:\n    \"\"\"Global telegram error handler to avoid unhandled exception noise.\"\"\"\n    logger.exception(\"Unhandled Telegram error\", exc_info=context.error)\n    try:\n        if isinstance(update, Update) and update.effective_message:\n            await update.effective_message.reply_text(\n                \"❌ Terjadi error internal saat memproses request. Coba lagi.\"\n            )\n    except Exception:",
         "detail": "src.telegram_bot",
         "documentation": {}
     },
@@ -1158,7 +1370,7 @@
         "kind": 2,
         "importPath": "src.vector_store",
         "description": "src.vector_store",
-        "peekOfCode": "def initialize_vector_store() -> QdrantVectorStore:\n    \"\"\"\n    Initializes Qdrant, validates dimensions (Strict Dimension Checking),\n    and returns a LangChain Qdrant vector store instance.\n    \"\"\"\n    client = get_qdrant_client()\n    collection_name = config.QDRANT_COLLECTION_NAME\n    expected_dimension = config.EMBEDDER_DIMENSION\n    try:\n        collection_info = client.get_collection(collection_name)",
+        "peekOfCode": "def initialize_vector_store() -> QdrantVectorStore:\n    \"\"\"\n    Initializes Qdrant, validates dimensions (Strict Dimension Checking),\n    and returns a LangChain Qdrant vector store instance.\n    \"\"\"\n    client = get_qdrant_client()\n    collection_name = config.QDRANT_COLLECTION_NAME\n    expected_dimension = config.EMBEDDER_DIMENSION\n    vector_name = \"\"\n    try:",
         "detail": "src.vector_store",
         "documentation": {}
     },
@@ -1167,7 +1379,7 @@
         "kind": 2,
         "importPath": "src.vector_store",
         "description": "src.vector_store",
-        "peekOfCode": "def get_db_stats():\n    \"\"\"Helper to get current database statistics.\"\"\"\n    try:\n        client = get_qdrant_client()\n        collection_info = client.get_collection(config.QDRANT_COLLECTION_NAME)\n        count = collection_info.points_count\n        dim = collection_info.config.params.vectors.size\n        return {\n            \"collection_name\": config.QDRANT_COLLECTION_NAME,\n            \"document_count\": count,",
+        "peekOfCode": "def get_db_stats():\n    \"\"\"Helper to get current database statistics.\"\"\"\n    try:\n        client = get_qdrant_client()\n        collection_info = client.get_collection(config.QDRANT_COLLECTION_NAME)\n        count = collection_info.points_count\n        vectors_config = collection_info.config.params.vectors\n        if isinstance(vectors_config, dict):\n            if \"dense\" in vectors_config:\n                dim = vectors_config[\"dense\"].size",
         "detail": "src.vector_store",
         "documentation": {}
     },
@@ -1186,6 +1398,15 @@
         "importPath": "src.vector_store",
         "description": "src.vector_store",
         "peekOfCode": "def delete_by_source(source: str) -> int:\n    \"\"\"Delete all points in Qdrant that match the given source metadata.\n    Returns the number of points deleted.\"\"\"\n    client = get_qdrant_client()\n    collection_name = config.QDRANT_COLLECTION_NAME\n    try:\n        client.get_collection(collection_name)\n    except Exception:\n        return 0\n    # Scroll through all points matching this source",
+        "detail": "src.vector_store",
+        "documentation": {}
+    },
+    {
+        "label": "ingest_documents",
+        "kind": 2,
+        "importPath": "src.vector_store",
+        "description": "src.vector_store",
+        "peekOfCode": "def ingest_documents(documents: list, vector_store) -> None:\n    \"\"\"\n    Custom wrapper to ingest documents into Qdrant.\n    It computes dense embeddings (via LangChain) and sparse embeddings (via fastembed)\n    then upserts them as named vectors.\n    \"\"\"\n    if not documents:\n        return\n    import uuid\n    from src.config import config",
         "detail": "src.vector_store",
         "documentation": {}
     },
