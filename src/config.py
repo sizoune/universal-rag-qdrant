@@ -39,6 +39,15 @@ class Config:
         API_PORT = 8000
     API_CORS_ORIGINS = os.getenv("API_CORS_ORIGINS", "*")
     UPLOADS_DIR = os.getenv("UPLOADS_DIR", "uploads")
+    INGEST_BASE_DIR = os.getenv("INGEST_BASE_DIR", "")
+    try:
+        UPLOAD_MAX_BYTES = int(os.getenv("UPLOAD_MAX_BYTES", "10485760"))
+    except ValueError:
+        UPLOAD_MAX_BYTES = 10485760
+    try:
+        WEB_MAX_CONTENT_BYTES = int(os.getenv("WEB_MAX_CONTENT_BYTES", "2097152"))
+    except ValueError:
+        WEB_MAX_CONTENT_BYTES = 2097152
 
     # === Memory Config ===
     MEMORY_TYPE = os.getenv("MEMORY_TYPE", "buffer_window")

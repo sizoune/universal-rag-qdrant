@@ -1,5 +1,4 @@
 import os
-import shutil
 import threading
 from datetime import UTC, datetime
 
@@ -43,6 +42,20 @@ def _parse_cors_origins() -> list[str]:
     if not raw:
         return ["*"]
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+def _get_ingest_base_dir() -> str:
+    base = (config.INGEST_BASE_DIR or config.UPLOADS_DIR or "uploads").strip() or "uploads"
+    return os.path.abspath(base)
+
+
+def _is_within_base_dir(path: str, base_dir: str) -> bool:
+    try:
+        return os.path.commonpath([os.path.abspath(path), os.path.abspath(base_dir)]) == os.path.abspath(
+            base_dir
+        )
+    except ValueError:
+        return False
 
 
 app.add_middleware(
@@ -122,7 +135,10 @@ def _is_web_source(source: str) -> bool:
 
 def _reingest_source(source: str) -> OperationResponse:
     if _is_web_source(source):
-        docs, changed = parse_web_url(source)
+        try:
+            docs, changed = parse_web_url(source)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         if not changed:
             return OperationResponse(
                 success=True,
@@ -221,7 +237,10 @@ def ingest_web(payload: IngestWebRequest):
         raise HTTPException(status_code=400, detail="url cannot be empty")
 
     with _ingest_lock:
-        docs, changed = parse_web_url(payload.url.strip())
+        try:
+            docs, changed = parse_web_url(payload.url.strip())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         if not changed:
             return OperationResponse(
                 success=True,
@@ -247,9 +266,16 @@ def ingest_web(payload: IngestWebRequest):
 
 @api_router.post("/ingest/file-path", response_model=OperationResponse)
 def ingest_file_path(payload: IngestPathRequest):
-    path = (payload.path or "").strip()
-    if not path:
+    path_raw = (payload.path or "").strip()
+    if not path_raw:
         raise HTTPException(status_code=400, detail="path cannot be empty")
+    path = os.path.abspath(path_raw)
+    ingest_base_dir = _get_ingest_base_dir()
+    if not _is_within_base_dir(path, ingest_base_dir):
+        raise HTTPException(
+            status_code=403,
+            detail=f"path must be inside ingest base directory: {ingest_base_dir}",
+        )
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="path not found")
 
@@ -320,14 +346,31 @@ def file_detail(source_id: str):
 
 @api_router.post("/files/upload", response_model=OperationResponse)
 def upload_file(file: UploadFile = File(...)):
-    uploads_dir = config.UPLOADS_DIR.strip() or "uploads"
+    uploads_dir = os.path.abspath(config.UPLOADS_DIR.strip() or "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
     timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
     clean_name = os.path.basename(file.filename or "upload.bin")
     target = os.path.abspath(os.path.join(uploads_dir, f"{timestamp}_{clean_name}"))
+    max_upload_bytes = config.UPLOAD_MAX_BYTES if config.UPLOAD_MAX_BYTES > 0 else 10485760
 
-    with open(target, "wb") as out:
-        shutil.copyfileobj(file.file, out)
+    total_bytes = 0
+    try:
+        with open(target, "wb") as out:
+            while True:
+                chunk = file.file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total_bytes += len(chunk)
+                if total_bytes > max_upload_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"uploaded file exceeds max allowed size ({max_upload_bytes} bytes)",
+                    )
+                out.write(chunk)
+    except HTTPException:
+        if os.path.exists(target):
+            os.remove(target)
+        raise
 
     with _ingest_lock:
         deleted_chunks, added_chunks = _ingest_single_file(target, source_type="upload")

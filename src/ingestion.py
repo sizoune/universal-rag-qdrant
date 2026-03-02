@@ -1,5 +1,8 @@
 import os
 import logging
+import ipaddress
+import socket
+from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 import requests
 from langchain_community.document_loaders import (
@@ -13,8 +16,93 @@ from langchain_core.documents import Document
 from src.utils import get_file_hash, is_file_allowed
 from src.cache_store import load_cache, save_cache, get_content_hash
 from src.code_parser import parse_code_file
+from src.config import config
 
 logger = logging.getLogger(__name__)
+
+
+def validate_public_http_url(url: str) -> None:
+    """Validate URL to reduce SSRF risk (public http/https only)."""
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("Only http/https URLs are allowed")
+
+    hostname = (parsed.hostname or "").strip().lower()
+    if not hostname:
+        raise ValueError("URL hostname is required")
+    if hostname in {"localhost", "localhost.localdomain"} or hostname.endswith(".local"):
+        raise ValueError("Localhost URLs are not allowed")
+
+    # Direct IP validation
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_multicast
+            or ip.is_reserved
+            or ip.is_unspecified
+        ):
+            raise ValueError("Private or non-routable IPs are not allowed")
+        return
+    except ValueError:
+        # hostname is not an IP literal; continue DNS resolution checks
+        pass
+
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        addresses = socket.getaddrinfo(hostname, port, proto=socket.IPPROTO_TCP)
+    except socket.gaierror as exc:
+        raise ValueError(f"Cannot resolve hostname: {hostname}") from exc
+
+    for _, _, _, _, sockaddr in addresses:
+        resolved_ip = ipaddress.ip_address(sockaddr[0])
+        if (
+            resolved_ip.is_private
+            or resolved_ip.is_loopback
+            or resolved_ip.is_link_local
+            or resolved_ip.is_multicast
+            or resolved_ip.is_reserved
+            or resolved_ip.is_unspecified
+        ):
+            raise ValueError("Resolved to private or non-routable IP")
+
+
+def _fetch_web_content_with_limits(url: str, headers: dict) -> str:
+    max_redirects = 5
+    max_bytes = config.WEB_MAX_CONTENT_BYTES if config.WEB_MAX_CONTENT_BYTES > 0 else 2097152
+    current_url = url
+
+    for _ in range(max_redirects + 1):
+        validate_public_http_url(current_url)
+        with requests.get(
+            current_url,
+            headers=headers,
+            timeout=30,
+            allow_redirects=False,
+            stream=True,
+        ) as response:
+            if 300 <= response.status_code < 400 and response.headers.get("Location"):
+                current_url = urljoin(current_url, response.headers["Location"])
+                continue
+
+            response.raise_for_status()
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=8192):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > max_bytes:
+                    raise ValueError(
+                        f"Web content exceeded max size limit ({max_bytes} bytes)"
+                    )
+                chunks.append(chunk)
+            encoding = response.encoding or "utf-8"
+            return b"".join(chunks).decode(encoding, errors="replace")
+
+    raise ValueError("Too many redirects while fetching URL")
 
 
 def get_text_splitter():
@@ -41,10 +129,11 @@ def parse_web_url(url: str) -> tuple[list[Document], bool]:
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             )
         }
-        response = requests.get(url, headers=headers, timeout=30)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
+        try:
+            html = _fetch_web_content_with_limits(url, headers=headers)
+        except ValueError as exc:
+            raise ValueError(f"invalid web URL: {exc}") from exc
+        soup = BeautifulSoup(html, "html.parser")
 
         # Remove noise elements
         for tag in soup.find_all(

@@ -77,6 +77,9 @@ QDRANT_COLLECTION_NAME="universal_rag_collection"
 
 # Optional: folder khusus untuk ingest upload
 UPLOADS_DIR="uploads"
+INGEST_BASE_DIR="uploads"
+UPLOAD_MAX_BYTES=10485760
+WEB_MAX_CONTENT_BYTES=2097152
 
 # LLM
 LLM_BASE_URL="https://api.openai.com/v1"
@@ -189,3 +192,5 @@ venv\Scripts\python -m pytest tests/
 
 - Jika mengganti model embedding dengan dimensi berbeda, lakukan re-index/clear collection.
 - Untuk mode hybrid, disarankan ingest ulang agar sparse vector tersedia untuk semua chunk.
+- Endpoint `POST /api/v1/ingest/file-path` dibatasi hanya untuk path di dalam `INGEST_BASE_DIR`.
+- Upload API dibatasi oleh `UPLOAD_MAX_BYTES`, dan ingest web dibatasi oleh `WEB_MAX_CONTENT_BYTES`.

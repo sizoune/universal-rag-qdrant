@@ -184,3 +184,57 @@ def test_reingest_all_sources_partial_failure(monkeypatch):
     assert body["processed_files"] == 1
     assert body["added_chunks"] == 1
     assert "failure" in body["message"]
+
+
+def test_ingest_file_path_rejects_outside_ingest_base_dir(monkeypatch, tmp_path):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    allowed_dir = tmp_path / "allowed"
+    allowed_dir.mkdir()
+    outside_file = tmp_path / "outside.txt"
+    outside_file.write_text("secret")
+
+    monkeypatch.setattr(api.config, "INGEST_BASE_DIR", str(allowed_dir))
+
+    resp = client.post(
+        "/api/v1/ingest/file-path",
+        headers=_auth_header(),
+        json={"path": str(outside_file)},
+    )
+    assert resp.status_code == 403
+    assert "ingest base directory" in resp.json()["detail"]
+
+
+def test_upload_file_rejects_when_too_large(monkeypatch, tmp_path):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    monkeypatch.setattr(api.config, "UPLOADS_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setattr(api.config, "UPLOAD_MAX_BYTES", 10)
+
+    resp = client.post(
+        "/api/v1/files/upload",
+        headers=_auth_header(),
+        files={"file": ("big.txt", b"12345678901", "text/plain")},
+    )
+    assert resp.status_code == 413
+    assert "max allowed size" in resp.json()["detail"]
+
+
+def test_ingest_web_invalid_url_returns_400(monkeypatch):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    def _raise_invalid(_url):
+        raise ValueError("invalid web URL: Localhost URLs are not allowed")
+
+    monkeypatch.setattr(api, "parse_web_url", _raise_invalid)
+
+    resp = client.post(
+        "/api/v1/ingest/web",
+        headers=_auth_header(),
+        json={"url": "http://localhost:8000"},
+    )
+    assert resp.status_code == 400
+    assert "invalid web URL" in resp.json()["detail"]
