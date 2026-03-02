@@ -114,7 +114,10 @@ def _run_ingest_path(path: str) -> tuple[int, int, int]:
 
 def _ingest_single_file(filepath: str, source_type: str = "local") -> tuple[int, int]:
     abs_path = os.path.abspath(filepath)
-    docs = load_local_document(abs_path)
+    try:
+        docs = load_local_document(abs_path)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not docs:
         return 0, 0
 
@@ -373,7 +376,12 @@ def upload_file(file: UploadFile = File(...)):
         raise
 
     with _ingest_lock:
-        deleted_chunks, added_chunks = _ingest_single_file(target, source_type="upload")
+        try:
+            deleted_chunks, added_chunks = _ingest_single_file(target, source_type="upload")
+        except HTTPException:
+            if os.path.exists(target):
+                os.remove(target)
+            raise
 
     if added_chunks == 0:
         raise HTTPException(status_code=400, detail="uploaded file cannot be ingested")

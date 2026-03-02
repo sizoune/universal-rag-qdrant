@@ -238,3 +238,23 @@ def test_ingest_web_invalid_url_returns_400(monkeypatch):
     )
     assert resp.status_code == 400
     assert "invalid web URL" in resp.json()["detail"]
+
+
+def test_upload_file_returns_400_when_pdf_dependency_missing(monkeypatch, tmp_path):
+    api = _load_api()
+    client = TestClient(api.app, raise_server_exceptions=False)
+
+    monkeypatch.setattr(api.config, "UPLOADS_DIR", str(tmp_path / "uploads"))
+
+    def _raise_missing_pdf_dep(_filepath):
+        raise RuntimeError("PDF ingestion requires `pypdf`. Install dependency and restart service.")
+
+    monkeypatch.setattr(api, "load_local_document", _raise_missing_pdf_dep)
+
+    resp = client.post(
+        "/api/v1/files/upload",
+        headers=_auth_header(),
+        files={"file": ("sample.pdf", b"%PDF-1.4\n", "application/pdf")},
+    )
+    assert resp.status_code == 400
+    assert "pypdf" in resp.json()["detail"]

@@ -2,6 +2,7 @@ import os
 import logging
 import ipaddress
 import socket
+import importlib.util
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 import requests
@@ -206,6 +207,10 @@ def load_local_document(filepath: str) -> list[Document]:
 
     try:
         if ext == ".pdf":
+            if importlib.util.find_spec("pypdf") is None:
+                raise RuntimeError(
+                    "PDF ingestion requires `pypdf`. Install dependency and restart service."
+                )
             loader = PyPDFLoader(filepath)
         elif ext == ".csv":
             loader = CSVLoader(filepath)
@@ -220,6 +225,8 @@ def load_local_document(filepath: str) -> list[Document]:
             doc.metadata["file_hash"] = get_file_hash(filepath)
 
         return docs
+    except RuntimeError:
+        raise
     except Exception as e:
         logger.error(f"Failed to load document '{filepath}': {e}")
         return []
