@@ -255,13 +255,15 @@ def process_directory(
     cache = load_cache()
     splitter = get_text_splitter()
 
+    max_size_mb = max(1, config.UPLOAD_MAX_BYTES // (1024 * 1024))
+
     for root, _, files in os.walk(dir_path):
         for file in files:
             filepath = os.path.join(root, file)
             filepath = os.path.abspath(filepath)
 
             # File Filtering
-            if not is_file_allowed(filepath):
+            if not is_file_allowed(filepath, max_size_mb=max_size_mb):
                 continue
 
             # Incremental Hash Checking (persistent cache)
