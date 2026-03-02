@@ -48,6 +48,7 @@ _session_histories: dict[str, list] = {}
 _ingest_status = {
     "running": False,
     "current_task": None,
+    "current_source": None,
     "started_at": None,
     "finished_at": None,
     "last_message": None,
@@ -122,21 +123,28 @@ def _set_ingest_status_start(task: str):
     with _ingest_status_lock:
         _ingest_status["running"] = True
         _ingest_status["current_task"] = task
+        _ingest_status["current_source"] = None
         _ingest_status["started_at"] = _iso_now()
         _ingest_status["finished_at"] = None
         _ingest_status["last_message"] = None
+
+
+def _set_ingest_status_current_source(source: str | None):
+    with _ingest_status_lock:
+        _ingest_status["current_source"] = source
 
 
 def _set_ingest_status_finish(message: str):
     with _ingest_status_lock:
         _ingest_status["running"] = False
         _ingest_status["current_task"] = None
+        _ingest_status["current_source"] = None
         _ingest_status["finished_at"] = _iso_now()
         _ingest_status["last_message"] = message
 
 
 def _run_ingest_path(path: str) -> tuple[int, int, int]:
-    docs, changed_sources = process_directory(path)
+    docs, changed_sources = process_directory(path, on_file_start=_set_ingest_status_current_source)
     if not docs:
         return 0, 0, 0
 
@@ -256,6 +264,7 @@ def ingest_status_endpoint():
         return IngestStatusResponse(
             running=bool(_ingest_status["running"]),
             current_task=_ingest_status["current_task"],
+            current_source=_ingest_status["current_source"],
             started_at=_ingest_status["started_at"],
             finished_at=_ingest_status["finished_at"],
             last_message=_ingest_status["last_message"],

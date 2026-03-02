@@ -17,6 +17,7 @@ class IngestPathRequest(BaseModel):
 class IngestStatusResponse(BaseModel):
     running: bool
     current_task: str | None = None
+    current_source: str | None = None
     started_at: str | None = None
     finished_at: str | None = None
     last_message: str | None = None

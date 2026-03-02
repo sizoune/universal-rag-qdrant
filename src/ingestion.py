@@ -3,6 +3,7 @@ import logging
 import ipaddress
 import socket
 import importlib.util
+from collections.abc import Callable
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 import requests
@@ -232,7 +233,10 @@ def load_local_document(filepath: str) -> list[Document]:
         return []
 
 
-def process_directory(dir_path: str) -> tuple[list[Document], list[str]]:
+def process_directory(
+    dir_path: str,
+    on_file_start: Callable[[str], None] | None = None,
+) -> tuple[list[Document], list[str]]:
     """Scans directory, filters files, checks hashes for incremental updates,
     and returns chunked LangChain documents for Vector Store ingestion.
 
@@ -268,6 +272,8 @@ def process_directory(dir_path: str) -> tuple[list[Document], list[str]]:
 
             # Process new/changed file
             logger.info(f"Loading '{filepath}'...")
+            if on_file_start is not None:
+                on_file_start(filepath)
             docs = load_local_document(filepath)
 
             if docs:

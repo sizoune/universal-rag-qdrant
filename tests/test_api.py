@@ -337,6 +337,7 @@ def test_ingest_status_endpoint(monkeypatch):
         {
             "running": True,
             "current_task": "ingest_uploads",
+            "current_source": "/home/linux/universal-rag-qdrant/uploads/a.pdf",
             "started_at": "2026-03-03T00:00:00+00:00",
             "finished_at": None,
             "last_message": None,
@@ -348,3 +349,4 @@ def test_ingest_status_endpoint(monkeypatch):
     body = resp.json()
     assert body["running"] is True
     assert body["current_task"] == "ingest_uploads"
+    assert body["current_source"] == "/home/linux/universal-rag-qdrant/uploads/a.pdf"
