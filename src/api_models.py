@@ -40,6 +40,7 @@ class FileListResponse(BaseModel):
 
 
 class UploadFileItem(BaseModel):
+    upload_id: str
     filename: str
     path: str
     size_bytes: int

@@ -22,7 +22,12 @@ from src.api_models import (
 )
 from src.chat import SYSTEM_PROMPT_TEMPLATE, estimate_tokens, get_chat_chain
 from src.config import config
-from src.file_index import decode_source_id, get_source_detail, list_indexed_sources
+from src.file_index import (
+    decode_source_id,
+    encode_source_id,
+    get_source_detail,
+    list_indexed_sources,
+)
 from src.ingestion import get_text_splitter, load_local_document, parse_web_url, process_directory
 from src.vector_store import (
     delete_by_source,
@@ -365,6 +370,7 @@ def list_uploads(
             ingested = indexed is not None
             all_files.append(
                 {
+                    "upload_id": encode_source_id(path),
                     "filename": filename,
                     "path": path,
                     "size_bytes": stat.st_size,
@@ -392,6 +398,31 @@ def list_uploads(
         page_size=page_size,
         total_pages=total_pages,
         uploads_dir=uploads_dir,
+    )
+
+
+@api_router.delete("/uploads/{upload_id}", response_model=OperationResponse)
+def delete_upload(upload_id: str):
+    try:
+        upload_path = os.path.abspath(decode_source_id(upload_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    uploads_dir = os.path.abspath(config.UPLOADS_DIR.strip() or "uploads")
+    if not _is_within_base_dir(upload_path, uploads_dir):
+        raise HTTPException(status_code=403, detail="upload path is outside uploads directory")
+    if not os.path.exists(upload_path) or not os.path.isfile(upload_path):
+        raise HTTPException(status_code=404, detail="upload file not found")
+
+    with _ingest_lock:
+        deleted_chunks = delete_by_source(upload_path)
+        os.remove(upload_path)
+
+    return OperationResponse(
+        success=True,
+        message="Upload file deleted",
+        deleted_chunks=deleted_chunks,
+        processed_files=1,
     )
 
 

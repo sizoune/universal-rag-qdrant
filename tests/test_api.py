@@ -279,6 +279,32 @@ def test_uploads_list_returns_paginated_items_and_ingest_status(monkeypatch, tmp
     assert statuses["b.pdf"] == "not_ingested"
 
 
+def test_delete_upload_removes_file_and_vectors(monkeypatch, tmp_path):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    uploads_dir = tmp_path / "uploads"
+    uploads_dir.mkdir()
+    target = uploads_dir / "remove-me.pdf"
+    target.write_bytes(b"dummy")
+
+    monkeypatch.setattr(api.config, "UPLOADS_DIR", str(uploads_dir))
+    calls = {"source": None}
+
+    def _delete_by_source(source: str):
+        calls["source"] = source
+        return 7
+
+    monkeypatch.setattr(api, "delete_by_source", _delete_by_source)
+    upload_id = api.encode_source_id(str(target))
+
+    resp = client.delete(f"/api/v1/uploads/{upload_id}", headers=_auth_header())
+    assert resp.status_code == 200
+    assert resp.json()["deleted_chunks"] == 7
+    assert calls["source"] == str(target)
+    assert not target.exists()
+
+
 def test_upload_file_returns_400_when_pdf_dependency_missing(monkeypatch, tmp_path):
     api = _load_api()
     client = TestClient(api.app, raise_server_exceptions=False)
