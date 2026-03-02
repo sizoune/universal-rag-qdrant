@@ -39,6 +39,27 @@ class FileListResponse(BaseModel):
     total: int
 
 
+class UploadFileItem(BaseModel):
+    filename: str
+    path: str
+    size_bytes: int
+    modified_at: str
+    ingested: bool
+    ingest_status: str
+    source_id: str | None = None
+    chunk_count: int | None = None
+    last_seen: str | None = None
+
+
+class UploadFileListResponse(BaseModel):
+    items: list[UploadFileItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    uploads_dir: str
+
+
 class OperationResponse(BaseModel):
     success: bool
     message: str

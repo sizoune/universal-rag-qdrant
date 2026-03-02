@@ -3,6 +3,7 @@ import threading
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -16,6 +17,8 @@ from src.api_models import (
     IngestWebRequest,
     OperationResponse,
     TokenUsage,
+    UploadFileItem,
+    UploadFileListResponse,
 )
 from src.chat import SYSTEM_PROMPT_TEMPLATE, estimate_tokens, get_chat_chain
 from src.config import config
@@ -85,6 +88,10 @@ def _get_or_create_chain():
 
 def _iso_now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _iso_from_timestamp(ts: float) -> str:
+    return datetime.fromtimestamp(ts, tz=UTC).isoformat()
 
 
 def _enrich_docs_metadata(docs: list, source: str | None = None, source_type: str | None = None):
@@ -332,6 +339,60 @@ def ingest_uploads():
 def list_files():
     items = [FileItem(**item) for item in list_indexed_sources(_get_or_create_vector_store())]
     return FileListResponse(items=items, total=len(items))
+
+
+@api_router.get("/uploads", response_model=UploadFileListResponse)
+def list_uploads(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=10),
+):
+    uploads_dir = os.path.abspath(config.UPLOADS_DIR.strip() or "uploads")
+    os.makedirs(uploads_dir, exist_ok=True)
+
+    indexed_items = list_indexed_sources(_get_or_create_vector_store())
+    indexed_by_source = {item["source"]: item for item in indexed_items if item.get("source")}
+
+    all_files: list[dict] = []
+    for root, _, filenames in os.walk(uploads_dir):
+        for filename in filenames:
+            path = os.path.abspath(os.path.join(root, filename))
+            try:
+                stat = os.stat(path)
+            except OSError:
+                continue
+
+            indexed = indexed_by_source.get(path)
+            ingested = indexed is not None
+            all_files.append(
+                {
+                    "filename": filename,
+                    "path": path,
+                    "size_bytes": stat.st_size,
+                    "modified_at": _iso_from_timestamp(stat.st_mtime),
+                    "ingested": ingested,
+                    "ingest_status": "ingested" if ingested else "not_ingested",
+                    "source_id": indexed.get("source_id") if indexed else None,
+                    "chunk_count": indexed.get("chunk_count") if indexed else None,
+                    "last_seen": indexed.get("last_seen") if indexed else None,
+                    "_mtime": stat.st_mtime,
+                }
+            )
+
+    all_files.sort(key=lambda item: item["_mtime"], reverse=True)
+    total = len(all_files)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_items = all_files[start:end]
+
+    return UploadFileListResponse(
+        items=[UploadFileItem(**{k: v for k, v in item.items() if k != "_mtime"}) for item in page_items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        uploads_dir=uploads_dir,
+    )
 
 
 @api_router.get("/files/{source_id}", response_model=FileItem)

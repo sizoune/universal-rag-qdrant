@@ -240,6 +240,45 @@ def test_ingest_web_invalid_url_returns_400(monkeypatch):
     assert "invalid web URL" in resp.json()["detail"]
 
 
+def test_uploads_list_returns_paginated_items_and_ingest_status(monkeypatch, tmp_path):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    uploads_dir = tmp_path / "uploads"
+    uploads_dir.mkdir()
+    ingested_file = uploads_dir / "a.pdf"
+    ingested_file.write_bytes(b"file-a")
+    pending_file = uploads_dir / "b.pdf"
+    pending_file.write_bytes(b"file-b")
+
+    monkeypatch.setattr(api.config, "UPLOADS_DIR", str(uploads_dir))
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
+    monkeypatch.setattr(
+        api,
+        "list_indexed_sources",
+        lambda _vs: [
+            {
+                "source_id": "src1",
+                "source": str(ingested_file),
+                "source_type": "upload",
+                "chunk_count": 12,
+                "last_seen": "2026-03-03T00:00:00+00:00",
+            }
+        ],
+    )
+
+    resp = client.get("/api/v1/uploads?page=1&page_size=10", headers=_auth_header())
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    assert body["page"] == 1
+    assert body["page_size"] == 10
+    assert len(body["items"]) == 2
+    statuses = {item["filename"]: item["ingest_status"] for item in body["items"]}
+    assert statuses["a.pdf"] == "ingested"
+    assert statuses["b.pdf"] == "not_ingested"
+
+
 def test_upload_file_returns_400_when_pdf_dependency_missing(monkeypatch, tmp_path):
     api = _load_api()
     client = TestClient(api.app, raise_server_exceptions=False)
