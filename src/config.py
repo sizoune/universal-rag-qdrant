@@ -30,6 +30,16 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_ALLOWED_USERS = os.getenv("TELEGRAM_ALLOWED_USERS", "")
 
+    # === API Config ===
+    API_BEARER_TOKEN = os.getenv("API_BEARER_TOKEN", "")
+    API_HOST = os.getenv("API_HOST", "0.0.0.0")
+    try:
+        API_PORT = int(os.getenv("API_PORT", "8000"))
+    except ValueError:
+        API_PORT = 8000
+    API_CORS_ORIGINS = os.getenv("API_CORS_ORIGINS", "*")
+    UPLOADS_DIR = os.getenv("UPLOADS_DIR", "uploads")
+
     # === Memory Config ===
     MEMORY_TYPE = os.getenv("MEMORY_TYPE", "buffer_window")
     MEMORY_SESSION_ID = os.getenv("MEMORY_SESSION_ID", "default_session")

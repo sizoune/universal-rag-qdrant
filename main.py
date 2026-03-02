@@ -92,6 +92,19 @@ def do_ingest_file(vector_store, path):
             )
 
 
+def do_ingest_uploads(vector_store):
+    """Ingest files from uploads directory (default: ./uploads or UPLOADS_DIR env)."""
+    uploads_dir = os.getenv("UPLOADS_DIR", "uploads").strip() or "uploads"
+    if not os.path.exists(uploads_dir):
+        os.makedirs(uploads_dir, exist_ok=True)
+        print(
+            f"Folder upload dibuat di: {uploads_dir}\n"
+            "Taruh file Anda di folder tersebut, lalu jalankan ulang command ini."
+        )
+        return
+    do_ingest_file(vector_store, uploads_dir)
+
+
 def do_status():
     """Print database status."""
     stats = get_db_stats()
@@ -152,6 +165,7 @@ Examples:
   python main.py                                  # Interactive menu
   python main.py ingest-web https://example.com   # Ingest a URL
   python main.py ingest-file ./documents           # Ingest a folder
+  python main.py ingest-uploads                    # Ingest from uploads folder
   python main.py chat                              # Interactive chat
   python main.py chat "apa itu SaaS"               # Single question, direct answer
   python main.py status                            # Check index status
@@ -169,6 +183,12 @@ Examples:
     # ingest-file
     p_file = sub.add_parser("ingest-file", help="Ingest a local folder or file")
     p_file.add_argument("path", help="Path to the folder or file")
+
+    # ingest-uploads
+    sub.add_parser(
+        "ingest-uploads",
+        help="Ingest from UPLOADS_DIR env or ./uploads by default",
+    )
 
     # chat
     p_chat = sub.add_parser("chat", help="Chat / Q&A (interactive or single question)")
@@ -204,6 +224,8 @@ def main():
         do_ingest_web(vector_store, args.url)
     elif args.command == "ingest-file":
         do_ingest_file(vector_store, args.path)
+    elif args.command == "ingest-uploads":
+        do_ingest_uploads(vector_store)
     elif args.command == "chat":
         if args.question:
             # Single-shot mode: answer and exit

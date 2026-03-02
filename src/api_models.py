@@ -1,0 +1,49 @@
+from pydantic import BaseModel, Field
+
+
+class ChatRequest(BaseModel):
+    question: str = Field(..., description="User question")
+    session_id: str | None = Field(default="default", description="Chat session id")
+
+
+class IngestWebRequest(BaseModel):
+    url: str
+
+
+class IngestPathRequest(BaseModel):
+    path: str
+
+
+class TokenUsage(BaseModel):
+    input_estimate: int
+    output_estimate: int
+    total_estimate: int
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: list[str]
+    token_usage: TokenUsage
+
+
+class FileItem(BaseModel):
+    source_id: str
+    source: str
+    source_type: str
+    chunk_count: int
+    last_seen: str | None = None
+
+
+class FileListResponse(BaseModel):
+    items: list[FileItem]
+    total: int
+
+
+class OperationResponse(BaseModel):
+    success: bool
+    message: str
+    deleted_chunks: int | None = None
+    added_chunks: int | None = None
+    skipped: bool | None = None
+    uploads_dir: str | None = None
+    processed_files: int | None = None

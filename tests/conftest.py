@@ -26,6 +26,12 @@ def mock_env_vars():
         "LLM_BASE_URL": "https://api.openai.com/v1",
         "LLM_API_KEY": "test-llm-key-456",
         "LLM_MODEL": "gpt-3.5-turbo",
+        # API config
+        "API_BEARER_TOKEN": "test-api-token",
+        "API_HOST": "0.0.0.0",
+        "API_PORT": "8000",
+        "API_CORS_ORIGINS": "*",
+        "UPLOADS_DIR": "uploads",
         # Memory & Search config
         "MEMORY_TYPE": "buffer_window",
         "MEMORY_SESSION_ID": "test_session",

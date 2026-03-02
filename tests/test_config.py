@@ -21,6 +21,9 @@ def test_config_loads_env_vars():
     assert config.LLM_BASE_URL == "https://api.openai.com/v1"
     assert config.LLM_API_KEY == "test-llm-key-456"
     assert config.LLM_MODEL == "gpt-3.5-turbo"
+    # API config
+    assert config.API_BEARER_TOKEN == "test-api-token"
+    assert config.API_PORT == 8000
     # Memory config
     assert config.MEMORY_WINDOW_SIZE == 5
 

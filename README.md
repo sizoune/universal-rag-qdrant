@@ -17,6 +17,7 @@ Universal RAG adalah sistem Retrieval-Augmented Generation berbasis Qdrant + Lan
 - Hybrid search mode (dense + sparse) dengan fallback aman
 - Optional cross-encoder reranking
 - Telegram bot gateway
+- FastAPI HTTP API + CRUD dokumen terindeks
 - Docker deployment (Qdrant + bot)
 
 ## Struktur Proyek
@@ -37,6 +38,7 @@ rag-project/
 |   |-- sparse_encoder.py
 |   `-- vector_store.py
 |-- tests/
+|-- api.py
 |-- Dockerfile
 |-- docker-compose.yml
 |-- main.py
@@ -73,6 +75,9 @@ EMBEDDER_DIMENSION=1536
 QDRANT_URL="http://localhost:6333"
 QDRANT_COLLECTION_NAME="universal_rag_collection"
 
+# Optional: folder khusus untuk ingest upload
+UPLOADS_DIR="uploads"
+
 # LLM
 LLM_BASE_URL="https://api.openai.com/v1"
 LLM_API_KEY="your-api-key"
@@ -82,6 +87,12 @@ LLM_MODEL="gpt-3.5-turbo"
 SEARCH_MODE="dense"              # dense | hybrid
 RERANKER_ENABLED=false
 RERANKER_MODEL="Xenova/ms-marco-MiniLM-L-6-v2"
+
+# API
+API_BEARER_TOKEN="change-me"
+API_HOST="0.0.0.0"
+API_PORT=8000
+API_CORS_ORIGINS="*"
 ```
 
 ### 3. Jalankan perintah
@@ -96,6 +107,9 @@ venv\Scripts\python main.py ingest-web https://id.wikipedia.org/wiki/SaaS
 # ingest folder/file
 venv\Scripts\python main.py ingest-file ./documents
 
+# ingest dari folder upload (default: ./uploads atau env UPLOADS_DIR)
+venv\Scripts\python main.py ingest-uploads
+
 # chat interaktif
 venv\Scripts\python main.py chat
 
@@ -104,6 +118,45 @@ venv\Scripts\python main.py chat "apa itu SaaS?"
 
 # telegram gateway
 venv\Scripts\python main.py gateway
+
+# API server (frontend integration)
+venv\Scripts\python -m uvicorn api:app --host 0.0.0.0 --port 8000
+```
+
+## API Integration (Frontend)
+
+Semua endpoint API berada di prefix `/api/v1/*` dan butuh header:
+
+```http
+Authorization: Bearer <API_BEARER_TOKEN>
+```
+
+OpenAPI docs:
+
+```text
+http://localhost:8000/docs
+```
+
+Endpoint utama:
+- `GET /health` (tanpa auth)
+- `GET /api/v1/status`
+- `POST /api/v1/chat`
+- `POST /api/v1/ingest/web`
+- `POST /api/v1/ingest/file-path`
+- `POST /api/v1/ingest/uploads`
+- `GET /api/v1/files`
+- `GET /api/v1/files/{source_id}`
+- `POST /api/v1/files/upload`
+- `PUT /api/v1/files/{source_id}`
+- `DELETE /api/v1/files/{source_id}`
+
+Contoh request chat:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/chat" \
+  -H "Authorization: Bearer change-me" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"apa itu SaaS?","session_id":"fe-user-1"}'
 ```
 
 ## Advanced RAG (Ringkas)
@@ -123,6 +176,7 @@ docker compose up --build
 Service default:
 - `qdrant` (port 6333)
 - `rag-bot` (menjalankan `python main.py gateway`)
+- `rag-api` (menjalankan `uvicorn api:app` di port 8000, docs: `http://localhost:8000/docs`)
 
 ## Testing
 

@@ -13,3 +13,6 @@ tree-sitter-python>=0.23.0
 tree-sitter-javascript>=0.23.0
 python-telegram-bot>=21.0
 fastembed>=0.2.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
