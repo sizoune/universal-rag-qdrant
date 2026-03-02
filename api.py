@@ -513,7 +513,7 @@ def upload_file(file: UploadFile = File(...)):
     timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
     clean_name = os.path.basename(file.filename or "upload.bin")
     target = os.path.abspath(os.path.join(uploads_dir, f"{timestamp}_{clean_name}"))
-    max_upload_bytes = config.UPLOAD_MAX_BYTES if config.UPLOAD_MAX_BYTES > 0 else 10485760
+    max_upload_bytes = config.UPLOAD_MAX_BYTES if config.UPLOAD_MAX_BYTES > 0 else 104857600
 
     total_bytes = 0
     try:

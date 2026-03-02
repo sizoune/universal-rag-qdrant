@@ -78,7 +78,7 @@ QDRANT_COLLECTION_NAME="universal_rag_collection"
 # Optional: folder khusus untuk ingest upload
 UPLOADS_DIR="uploads"
 INGEST_BASE_DIR="uploads"
-UPLOAD_MAX_BYTES=10485760
+UPLOAD_MAX_BYTES=104857600
 WEB_MAX_CONTENT_BYTES=2097152
 
 # LLM

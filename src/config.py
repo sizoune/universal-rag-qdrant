@@ -41,9 +41,9 @@ class Config:
     UPLOADS_DIR = os.getenv("UPLOADS_DIR", "uploads")
     INGEST_BASE_DIR = os.getenv("INGEST_BASE_DIR", "")
     try:
-        UPLOAD_MAX_BYTES = int(os.getenv("UPLOAD_MAX_BYTES", "10485760"))
+        UPLOAD_MAX_BYTES = int(os.getenv("UPLOAD_MAX_BYTES", "104857600"))
     except ValueError:
-        UPLOAD_MAX_BYTES = 10485760
+        UPLOAD_MAX_BYTES = 104857600
     try:
         WEB_MAX_CONTENT_BYTES = int(os.getenv("WEB_MAX_CONTENT_BYTES", "2097152"))
     except ValueError:
