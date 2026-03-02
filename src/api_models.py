@@ -14,6 +14,14 @@ class IngestPathRequest(BaseModel):
     path: str
 
 
+class IngestStatusResponse(BaseModel):
+    running: bool
+    current_task: str | None = None
+    started_at: str | None = None
+    finished_at: str | None = None
+    last_message: str | None = None
+
+
 class TokenUsage(BaseModel):
     input_estimate: int
     output_estimate: int

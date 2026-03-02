@@ -274,6 +274,7 @@ def test_uploads_list_returns_paginated_items_and_ingest_status(monkeypatch, tmp
     assert body["page"] == 1
     assert body["page_size"] == 10
     assert len(body["items"]) == 2
+    assert all("upload_id" in item for item in body["items"])
     statuses = {item["filename"]: item["ingest_status"] for item in body["items"]}
     assert statuses["a.pdf"] == "ingested"
     assert statuses["b.pdf"] == "not_ingested"
@@ -305,21 +306,45 @@ def test_delete_upload_removes_file_and_vectors(monkeypatch, tmp_path):
     assert not target.exists()
 
 
-def test_upload_file_returns_400_when_pdf_dependency_missing(monkeypatch, tmp_path):
+def test_upload_file_only_stores_file_without_auto_ingest(monkeypatch, tmp_path):
     api = _load_api()
-    client = TestClient(api.app, raise_server_exceptions=False)
+    client = TestClient(api.app)
 
-    monkeypatch.setattr(api.config, "UPLOADS_DIR", str(tmp_path / "uploads"))
-
-    def _raise_missing_pdf_dep(_filepath):
-        raise RuntimeError("PDF ingestion requires `pypdf`. Install dependency and restart service.")
-
-    monkeypatch.setattr(api, "load_local_document", _raise_missing_pdf_dep)
+    uploads_dir = tmp_path / "uploads"
+    monkeypatch.setattr(api.config, "UPLOADS_DIR", str(uploads_dir))
 
     resp = client.post(
         "/api/v1/files/upload",
         headers=_auth_header(),
-        files={"file": ("sample.pdf", b"%PDF-1.4\n", "application/pdf")},
+        files={"file": ("sample.pdf", b"%PDF-1.4\ncontent", "application/pdf")},
     )
-    assert resp.status_code == 400
-    assert "pypdf" in resp.json()["detail"]
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert body["skipped"] is True
+    assert body["added_chunks"] is None
+    files = list(uploads_dir.iterdir())
+    assert len(files) == 1
+    assert files[0].name.endswith("_sample.pdf")
+
+
+def test_ingest_status_endpoint(monkeypatch):
+    api = _load_api()
+    client = TestClient(api.app)
+    monkeypatch.setattr(
+        api,
+        "_ingest_status",
+        {
+            "running": True,
+            "current_task": "ingest_uploads",
+            "started_at": "2026-03-03T00:00:00+00:00",
+            "finished_at": None,
+            "last_message": None,
+        },
+    )
+
+    resp = client.get("/api/v1/ingest/status", headers=_auth_header())
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["running"] is True
+    assert body["current_task"] == "ingest_uploads"

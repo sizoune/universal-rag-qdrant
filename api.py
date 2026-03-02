@@ -14,6 +14,7 @@ from src.api_models import (
     FileItem,
     FileListResponse,
     IngestPathRequest,
+    IngestStatusResponse,
     IngestWebRequest,
     OperationResponse,
     TokenUsage,
@@ -39,10 +40,18 @@ from src.vector_store import (
 app = FastAPI(title="Universal RAG API", version="1.0.0")
 
 _ingest_lock = threading.Lock()
+_ingest_status_lock = threading.Lock()
 _chain_lock = threading.Lock()
 _vector_store = None
 _chat_chain = None
 _session_histories: dict[str, list] = {}
+_ingest_status = {
+    "running": False,
+    "current_task": None,
+    "started_at": None,
+    "finished_at": None,
+    "last_message": None,
+}
 
 
 def _parse_cors_origins() -> list[str]:
@@ -107,6 +116,23 @@ def _enrich_docs_metadata(docs: list, source: str | None = None, source_type: st
         if source_type is not None:
             doc.metadata["source_type"] = source_type
         doc.metadata["ingested_at"] = ingested_at
+
+
+def _set_ingest_status_start(task: str):
+    with _ingest_status_lock:
+        _ingest_status["running"] = True
+        _ingest_status["current_task"] = task
+        _ingest_status["started_at"] = _iso_now()
+        _ingest_status["finished_at"] = None
+        _ingest_status["last_message"] = None
+
+
+def _set_ingest_status_finish(message: str):
+    with _ingest_status_lock:
+        _ingest_status["running"] = False
+        _ingest_status["current_task"] = None
+        _ingest_status["finished_at"] = _iso_now()
+        _ingest_status["last_message"] = message
 
 
 def _run_ingest_path(path: str) -> tuple[int, int, int]:
@@ -224,6 +250,18 @@ def status_endpoint():
     return stats
 
 
+@api_router.get("/ingest/status", response_model=IngestStatusResponse)
+def ingest_status_endpoint():
+    with _ingest_status_lock:
+        return IngestStatusResponse(
+            running=bool(_ingest_status["running"]),
+            current_task=_ingest_status["current_task"],
+            started_at=_ingest_status["started_at"],
+            finished_at=_ingest_status["finished_at"],
+            last_message=_ingest_status["last_message"],
+        )
+
+
 @api_router.post("/chat", response_model=ChatResponse)
 def chat_endpoint(payload: ChatRequest):
     if not payload.question or not payload.question.strip():
@@ -252,31 +290,42 @@ def ingest_web(payload: IngestWebRequest):
         raise HTTPException(status_code=400, detail="url cannot be empty")
 
     with _ingest_lock:
+        _set_ingest_status_start("ingest_web")
+        status_message = "Web ingestion completed"
         try:
-            docs, changed = parse_web_url(payload.url.strip())
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        if not changed:
-            return OperationResponse(
-                success=True,
-                message="Content unchanged. Skipped ingestion.",
-                skipped=True,
-                deleted_chunks=0,
-                added_chunks=0,
-            )
-        if not docs:
-            raise HTTPException(status_code=500, detail="Failed to parse web content")
+            try:
+                docs, changed = parse_web_url(payload.url.strip())
+            except ValueError as exc:
+                status_message = str(exc)
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            if not changed:
+                result = OperationResponse(
+                    success=True,
+                    message="Content unchanged. Skipped ingestion.",
+                    skipped=True,
+                    deleted_chunks=0,
+                    added_chunks=0,
+                )
+                status_message = result.message
+                return result
+            if not docs:
+                status_message = "Failed to parse web content"
+                raise HTTPException(status_code=500, detail="Failed to parse web content")
 
-        _enrich_docs_metadata(docs, source=payload.url.strip(), source_type="web")
-        deleted_chunks = delete_by_source(payload.url.strip())
-        ingest_documents(docs, _get_or_create_vector_store())
-        return OperationResponse(
-            success=True,
-            message="Web ingestion completed",
-            skipped=False,
-            deleted_chunks=deleted_chunks,
-            added_chunks=len(docs),
-        )
+            _enrich_docs_metadata(docs, source=payload.url.strip(), source_type="web")
+            deleted_chunks = delete_by_source(payload.url.strip())
+            ingest_documents(docs, _get_or_create_vector_store())
+            result = OperationResponse(
+                success=True,
+                message="Web ingestion completed",
+                skipped=False,
+                deleted_chunks=deleted_chunks,
+                added_chunks=len(docs),
+            )
+            status_message = result.message
+            return result
+        finally:
+            _set_ingest_status_finish(status_message)
 
 
 @api_router.post("/ingest/file-path", response_model=OperationResponse)
@@ -295,32 +344,43 @@ def ingest_file_path(payload: IngestPathRequest):
         raise HTTPException(status_code=404, detail="path not found")
 
     with _ingest_lock:
-        if os.path.isfile(path):
-            deleted_chunks, added_chunks = _ingest_single_file(path, source_type="local")
-            if added_chunks == 0:
-                return OperationResponse(
+        _set_ingest_status_start("ingest_file_path")
+        status_message = "Path ingestion completed"
+        try:
+            if os.path.isfile(path):
+                deleted_chunks, added_chunks = _ingest_single_file(path, source_type="local")
+                if added_chunks == 0:
+                    result = OperationResponse(
+                        success=True,
+                        message="No supported content found in file",
+                        processed_files=0,
+                        deleted_chunks=deleted_chunks,
+                        added_chunks=0,
+                    )
+                    status_message = result.message
+                    return result
+                result = OperationResponse(
                     success=True,
-                    message="No supported content found in file",
-                    processed_files=0,
+                    message="File ingestion completed",
+                    processed_files=1,
                     deleted_chunks=deleted_chunks,
-                    added_chunks=0,
+                    added_chunks=added_chunks,
                 )
-            return OperationResponse(
+                status_message = result.message
+                return result
+
+            processed_files, deleted_chunks, added_chunks = _run_ingest_path(path)
+            result = OperationResponse(
                 success=True,
-                message="File ingestion completed",
-                processed_files=1,
+                message="Path ingestion completed",
+                processed_files=processed_files,
                 deleted_chunks=deleted_chunks,
                 added_chunks=added_chunks,
             )
-
-        processed_files, deleted_chunks, added_chunks = _run_ingest_path(path)
-        return OperationResponse(
-            success=True,
-            message="Path ingestion completed",
-            processed_files=processed_files,
-            deleted_chunks=deleted_chunks,
-            added_chunks=added_chunks,
-        )
+            status_message = result.message
+            return result
+        finally:
+            _set_ingest_status_finish(status_message)
 
 
 @api_router.post("/ingest/uploads", response_model=OperationResponse)
@@ -329,15 +389,22 @@ def ingest_uploads():
     os.makedirs(uploads_dir, exist_ok=True)
 
     with _ingest_lock:
-        processed_files, deleted_chunks, added_chunks = _run_ingest_path(uploads_dir)
-    return OperationResponse(
-        success=True,
-        message="Uploads ingestion completed",
-        uploads_dir=uploads_dir,
-        processed_files=processed_files,
-        deleted_chunks=deleted_chunks,
-        added_chunks=added_chunks,
-    )
+        _set_ingest_status_start("ingest_uploads")
+        status_message = "Uploads ingestion completed"
+        try:
+            processed_files, deleted_chunks, added_chunks = _run_ingest_path(uploads_dir)
+            result = OperationResponse(
+                success=True,
+                message="Uploads ingestion completed",
+                uploads_dir=uploads_dir,
+                processed_files=processed_files,
+                deleted_chunks=deleted_chunks,
+                added_chunks=added_chunks,
+            )
+            status_message = result.message
+            return result
+        finally:
+            _set_ingest_status_finish(status_message)
 
 
 @api_router.get("/files", response_model=FileListResponse)
@@ -467,23 +534,12 @@ def upload_file(file: UploadFile = File(...)):
             os.remove(target)
         raise
 
-    with _ingest_lock:
-        try:
-            deleted_chunks, added_chunks = _ingest_single_file(target, source_type="upload")
-        except HTTPException:
-            if os.path.exists(target):
-                os.remove(target)
-            raise
-
-    if added_chunks == 0:
-        raise HTTPException(status_code=400, detail="uploaded file cannot be ingested")
     return OperationResponse(
         success=True,
-        message="Upload and ingestion completed",
+        message="Upload completed. File not ingested yet.",
         uploads_dir=uploads_dir,
         processed_files=1,
-        deleted_chunks=deleted_chunks,
-        added_chunks=added_chunks,
+        skipped=True,
     )
 
 
@@ -495,60 +551,76 @@ def reingest_source(source_id: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     with _ingest_lock:
-        return _reingest_source(source)
+        _set_ingest_status_start("reingest_source")
+        status_message = "Source re-ingest completed"
+        try:
+            result = _reingest_source(source)
+            status_message = result.message
+            return result
+        finally:
+            _set_ingest_status_finish(status_message)
 
 
 @api_router.post("/files/reingest-all", response_model=OperationResponse)
 def reingest_all_sources():
     with _ingest_lock:
-        sources = list_indexed_sources(_get_or_create_vector_store())
-        if not sources:
-            return OperationResponse(
-                success=True,
-                message="No indexed sources found",
-                processed_files=0,
-                deleted_chunks=0,
-                added_chunks=0,
-                skipped=True,
+        _set_ingest_status_start("reingest_all_sources")
+        status_message = "Re-ingest all completed"
+        try:
+            sources = list_indexed_sources(_get_or_create_vector_store())
+            if not sources:
+                result = OperationResponse(
+                    success=True,
+                    message="No indexed sources found",
+                    processed_files=0,
+                    deleted_chunks=0,
+                    added_chunks=0,
+                    skipped=True,
+                )
+                status_message = result.message
+                return result
+
+            total_deleted = 0
+            total_added = 0
+            processed = 0
+            skipped_count = 0
+            failed_sources: list[str] = []
+
+            for item in sources:
+                source = item.get("source", "")
+                if not source:
+                    continue
+                try:
+                    result = _reingest_source(source)
+                    processed += 1
+                    total_deleted += result.deleted_chunks or 0
+                    total_added += result.added_chunks or 0
+                    if result.skipped:
+                        skipped_count += 1
+                except HTTPException:
+                    failed_sources.append(source)
+
+            failed_count = len(failed_sources)
+            message = (
+                "Re-ingest all completed"
+                if failed_count == 0
+                else (
+                    f"Re-ingest all completed with {failed_count} failure(s): "
+                    + ", ".join(failed_sources[:5])
+                )
             )
-
-        total_deleted = 0
-        total_added = 0
-        processed = 0
-        skipped_count = 0
-        failed_sources: list[str] = []
-
-        for item in sources:
-            source = item.get("source", "")
-            if not source:
-                continue
-            try:
-                result = _reingest_source(source)
-                processed += 1
-                total_deleted += result.deleted_chunks or 0
-                total_added += result.added_chunks or 0
-                if result.skipped:
-                    skipped_count += 1
-            except HTTPException:
-                failed_sources.append(source)
-
-        failed_count = len(failed_sources)
-        message = (
-            "Re-ingest all completed"
-            if failed_count == 0
-            else (
-                f"Re-ingest all completed with {failed_count} failure(s): "
-                + ", ".join(failed_sources[:5])
+            result = OperationResponse(
+                success=failed_count == 0,
+                message=message,
+                processed_files=processed,
+                deleted_chunks=total_deleted,
+                added_chunks=total_added,
+                skipped=processed > 0 and skipped_count == processed and failed_count == 0,
             )
-        )
-        return OperationResponse(
-            success=failed_count == 0,
-            message=message,
-            processed_files=processed,
-            deleted_chunks=total_deleted,
-            added_chunks=total_added,
-            skipped=processed > 0 and skipped_count == processed and failed_count == 0,
-        )
+            status_message = result.message
+            return result
+        finally:
+            _set_ingest_status_finish(status_message)
 
 
 @api_router.delete("/files/{source_id}", response_model=OperationResponse)
