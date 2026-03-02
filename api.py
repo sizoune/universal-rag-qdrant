@@ -120,6 +120,43 @@ def _is_web_source(source: str) -> bool:
     return source.startswith("http://") or source.startswith("https://")
 
 
+def _reingest_source(source: str) -> OperationResponse:
+    if _is_web_source(source):
+        docs, changed = parse_web_url(source)
+        if not changed:
+            return OperationResponse(
+                success=True,
+                message="Content unchanged. Skipped re-ingest.",
+                skipped=True,
+                deleted_chunks=0,
+                added_chunks=0,
+            )
+        if not docs:
+            raise HTTPException(status_code=500, detail="Failed to parse web content")
+        _enrich_docs_metadata(docs, source=source, source_type="web")
+        deleted_chunks = delete_by_source(source)
+        ingest_documents(docs, _get_or_create_vector_store())
+        return OperationResponse(
+            success=True,
+            message="Web source re-ingested",
+            deleted_chunks=deleted_chunks,
+            added_chunks=len(docs),
+        )
+
+    if not os.path.exists(source) or not os.path.isfile(source):
+        raise HTTPException(status_code=404, detail="local source file not found")
+
+    deleted_chunks, added_chunks = _ingest_single_file(source, source_type="local")
+    if added_chunks == 0:
+        raise HTTPException(status_code=400, detail="source cannot be ingested")
+    return OperationResponse(
+        success=True,
+        message="Local source re-ingested",
+        deleted_chunks=deleted_chunks,
+        added_chunks=added_chunks,
+    )
+
+
 def _calculate_token_usage(context_docs, history, question: str, answer: str) -> TokenUsage:
     context_text = "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
     history_text = " ".join(msg.content for msg in history) if history else ""
@@ -315,39 +352,59 @@ def reingest_source(source_id: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     with _ingest_lock:
-        if _is_web_source(source):
-            docs, changed = parse_web_url(source)
-            if not changed:
-                return OperationResponse(
-                    success=True,
-                    message="Content unchanged. Skipped re-ingest.",
-                    skipped=True,
-                    deleted_chunks=0,
-                    added_chunks=0,
-                )
-            if not docs:
-                raise HTTPException(status_code=500, detail="Failed to parse web content")
-            _enrich_docs_metadata(docs, source=source, source_type="web")
-            deleted_chunks = delete_by_source(source)
-            ingest_documents(docs, _get_or_create_vector_store())
+        return _reingest_source(source)
+
+
+@api_router.post("/files/reingest-all", response_model=OperationResponse)
+def reingest_all_sources():
+    with _ingest_lock:
+        sources = list_indexed_sources(_get_or_create_vector_store())
+        if not sources:
             return OperationResponse(
                 success=True,
-                message="Web source re-ingested",
-                deleted_chunks=deleted_chunks,
-                added_chunks=len(docs),
+                message="No indexed sources found",
+                processed_files=0,
+                deleted_chunks=0,
+                added_chunks=0,
+                skipped=True,
             )
 
-        if not os.path.exists(source) or not os.path.isfile(source):
-            raise HTTPException(status_code=404, detail="local source file not found")
+        total_deleted = 0
+        total_added = 0
+        processed = 0
+        skipped_count = 0
+        failed_sources: list[str] = []
 
-        deleted_chunks, added_chunks = _ingest_single_file(source, source_type="local")
-        if added_chunks == 0:
-            raise HTTPException(status_code=400, detail="source cannot be ingested")
+        for item in sources:
+            source = item.get("source", "")
+            if not source:
+                continue
+            try:
+                result = _reingest_source(source)
+                processed += 1
+                total_deleted += result.deleted_chunks or 0
+                total_added += result.added_chunks or 0
+                if result.skipped:
+                    skipped_count += 1
+            except HTTPException:
+                failed_sources.append(source)
+
+        failed_count = len(failed_sources)
+        message = (
+            "Re-ingest all completed"
+            if failed_count == 0
+            else (
+                f"Re-ingest all completed with {failed_count} failure(s): "
+                + ", ".join(failed_sources[:5])
+            )
+        )
         return OperationResponse(
-            success=True,
-            message="Local source re-ingested",
-            deleted_chunks=deleted_chunks,
-            added_chunks=added_chunks,
+            success=failed_count == 0,
+            message=message,
+            processed_files=processed,
+            deleted_chunks=total_deleted,
+            added_chunks=total_added,
+            skipped=processed > 0 and skipped_count == processed and failed_count == 0,
         )
 
 

@@ -105,3 +105,82 @@ def test_files_delete_by_source_id(monkeypatch):
     resp = client.delete(f"/api/v1/files/{source_id}", headers=_auth_header())
     assert resp.status_code == 200
     assert resp.json()["deleted_chunks"] == 4
+
+
+def test_reingest_all_sources_success(monkeypatch):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
+    monkeypatch.setattr(
+        api,
+        "list_indexed_sources",
+        lambda _vs: [
+            {"source": "https://a.test", "source_id": "1"},
+            {"source": "/tmp/a.txt", "source_id": "2"},
+        ],
+    )
+
+    calls = {"count": 0}
+
+    def _fake_reingest(source):
+        calls["count"] += 1
+        if source.startswith("https://"):
+            return api.OperationResponse(
+                success=True,
+                message="ok",
+                deleted_chunks=1,
+                added_chunks=2,
+            )
+        return api.OperationResponse(
+            success=True,
+            message="ok",
+            deleted_chunks=3,
+            added_chunks=4,
+        )
+
+    monkeypatch.setattr(api, "_reingest_source", _fake_reingest)
+
+    resp = client.post("/api/v1/files/reingest-all", headers=_auth_header())
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert body["processed_files"] == 2
+    assert body["deleted_chunks"] == 4
+    assert body["added_chunks"] == 6
+    assert calls["count"] == 2
+
+
+def test_reingest_all_sources_partial_failure(monkeypatch):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
+    monkeypatch.setattr(
+        api,
+        "list_indexed_sources",
+        lambda _vs: [
+            {"source": "https://ok.test", "source_id": "1"},
+            {"source": "/tmp/missing.txt", "source_id": "2"},
+        ],
+    )
+
+    def _fake_reingest(source):
+        if source.endswith("missing.txt"):
+            raise api.HTTPException(status_code=404, detail="local source file not found")
+        return api.OperationResponse(
+            success=True,
+            message="ok",
+            deleted_chunks=0,
+            added_chunks=1,
+        )
+
+    monkeypatch.setattr(api, "_reingest_source", _fake_reingest)
+
+    resp = client.post("/api/v1/files/reingest-all", headers=_auth_header())
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is False
+    assert body["processed_files"] == 1
+    assert body["added_chunks"] == 1
+    assert "failure" in body["message"]

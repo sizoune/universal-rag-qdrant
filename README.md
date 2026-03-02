@@ -148,6 +148,7 @@ Endpoint utama:
 - `GET /api/v1/files/{source_id}`
 - `POST /api/v1/files/upload`
 - `PUT /api/v1/files/{source_id}`
+- `POST /api/v1/files/reingest-all`
 - `DELETE /api/v1/files/{source_id}`
 
 Contoh request chat:
