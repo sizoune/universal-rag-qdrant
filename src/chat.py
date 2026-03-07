@@ -162,6 +162,85 @@ def get_chat_chain(vector_store):
     return rag_chain
 
 
+async def stream_chat_response(question: str, session_id: str, vector_store, history: list):
+    """Async generator for SSE streaming chat. Two-phase: sync retrieval + async LLM streaming."""
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+    search_mode = config.SEARCH_MODE.lower()
+
+    if search_mode == "hybrid":
+        from src.hybrid_retriever import HybridRetriever
+
+        retriever = HybridRetriever(
+            vector_store=vector_store,
+            score_threshold=config.SEARCH_SCORE_THRESHOLD,
+            k=config.MAX_SEARCH_RESULTS,
+        )
+    else:
+        threshold_retriever = vector_store.as_retriever(
+            search_type="similarity_score_threshold",
+            search_kwargs={
+                "score_threshold": config.SEARCH_SCORE_THRESHOLD,
+                "k": config.MAX_SEARCH_RESULTS,
+            },
+        )
+        similarity_retriever = vector_store.as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": config.MAX_SEARCH_RESULTS},
+        )
+        retriever = DenseThresholdFallbackRetriever(
+            threshold_retriever=threshold_retriever,
+            similarity_retriever=similarity_retriever,
+        )
+
+    # Phase A: Sync retrieval
+    context_docs = retriever.invoke(question)
+
+    context_text = "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
+    system_prompt = SYSTEM_PROMPT_TEMPLATE.format(context=context_text)
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+
+    llm = get_llm()
+    formatted = prompt.format_messages(chat_history=history, input=question)
+
+    # Phase B: Async LLM streaming
+    full_answer = []
+    async for chunk in llm.astream(formatted):
+        token = chunk.content if hasattr(chunk, "content") else str(chunk)
+        if token:
+            full_answer.append(token)
+            yield token, "token"
+
+    answer = "".join(full_answer)
+
+    # Yield sources
+    sources = list(dict.fromkeys(doc.metadata.get("source", "Unknown") for doc in context_docs))
+    yield sources, "sources"
+
+    # Yield token usage
+    history_text = " ".join(msg.content for msg in history) if history else ""
+    t_input = (
+        estimate_tokens(SYSTEM_PROMPT_TEMPLATE)
+        + estimate_tokens(context_text)
+        + estimate_tokens(history_text)
+        + estimate_tokens(question)
+    )
+    t_output = estimate_tokens(answer)
+    yield {"input_estimate": t_input, "output_estimate": t_output, "total_estimate": t_input + t_output}, "token_usage"
+
+    # Update history
+    history.extend([HumanMessage(content=question), AIMessage(content=answer)])
+    if len(history) > config.MEMORY_WINDOW_SIZE * 2:
+        history[:] = history[-config.MEMORY_WINDOW_SIZE * 2 :]
+
+
 def chat_interface(vector_store):
     """Interactive CLI loop for chatting."""
     print("\n--- Interactive Chat (Type '/exit' to quit) ---")

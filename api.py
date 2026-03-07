@@ -1,3 +1,4 @@
+import json
 import os
 import threading
 from datetime import UTC, datetime
@@ -6,6 +7,7 @@ from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import AIMessage, HumanMessage
+from starlette.responses import StreamingResponse
 
 from src.api_auth import verify_api_key
 from src.api_models import (
@@ -21,7 +23,7 @@ from src.api_models import (
     UploadFileItem,
     UploadFileListResponse,
 )
-from src.chat import SYSTEM_PROMPT_TEMPLATE, estimate_tokens, get_chat_chain
+from src.chat import SYSTEM_PROMPT_TEMPLATE, estimate_tokens, get_chat_chain, stream_chat_response
 from src.config import config
 from src.file_index import (
     decode_source_id,
@@ -291,6 +293,30 @@ def chat_endpoint(payload: ChatRequest):
         _session_histories[session_id] = history[-config.MEMORY_WINDOW_SIZE * 2 :]
 
     return ChatResponse(answer=answer, sources=sources, token_usage=token_usage)
+
+
+@api_router.post("/chat/stream")
+async def chat_stream_endpoint(payload: ChatRequest):
+    if not payload.question or not payload.question.strip():
+        raise HTTPException(status_code=400, detail="question cannot be empty")
+
+    session_id = (payload.session_id or "default").strip() or "default"
+    history = _session_histories.setdefault(session_id, [])
+    vector_store = _get_or_create_vector_store()
+
+    async def event_generator():
+        async for data, event_type in stream_chat_response(
+            payload.question, session_id, vector_store, history
+        ):
+            if event_type == "token":
+                yield f"data: {json.dumps({'type': 'token', 'content': data})}\n\n"
+            elif event_type == "sources":
+                yield f"data: {json.dumps({'type': 'sources', 'sources': data})}\n\n"
+            elif event_type == "token_usage":
+                yield f"data: {json.dumps({'type': 'token_usage', **data})}\n\n"
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @api_router.post("/ingest/web", response_model=OperationResponse)
