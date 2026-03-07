@@ -17,7 +17,10 @@ def get_reranker():
     if _reranker is None:
         model_name = getattr(config, "RERANKER_MODEL", "Xenova/ms-marco-MiniLM-L-6-v2")
         logger.info(f"Loading reranker model: {model_name} (first-time download)...")
-        from fastembed import TextCrossEncoder
+        try:
+            from fastembed.rerank.cross_encoder import TextCrossEncoder
+        except ImportError:
+            from fastembed import TextCrossEncoder
 
         _reranker = TextCrossEncoder(model_name=model_name)
         logger.info("Reranker model loaded.")
