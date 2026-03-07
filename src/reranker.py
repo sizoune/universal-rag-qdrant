@@ -54,12 +54,18 @@ def rerank(query: str, documents: list, top_k: int = None) -> list:
 
     # Build query-document pairs
     texts = [doc.page_content for doc in documents]
-    scores = list(reranker.rerank(query, texts))
+    raw_scores = list(reranker.rerank(query, texts))
+
+    # Normalize scores: newer fastembed returns floats, older returns objects with .relevance_score
+    scores = [
+        s.relevance_score if hasattr(s, "relevance_score") else float(s)
+        for s in raw_scores
+    ]
 
     # Sort by score descending
     scored_docs = sorted(
         zip(documents, scores),
-        key=lambda x: x[1].relevance_score,
+        key=lambda x: x[1],
         reverse=True,
     )
 
@@ -70,8 +76,8 @@ def rerank(query: str, documents: list, top_k: int = None) -> list:
 
     logger.info(
         f"Re-ranked {len(documents)} docs → top score: "
-        f"{scored_docs[0][1].relevance_score:.4f}, "
-        f"bottom: {scored_docs[-1][1].relevance_score:.4f}"
+        f"{scored_docs[0][1]:.4f}, "
+        f"bottom: {scored_docs[-1][1]:.4f}"
     )
 
     return result
