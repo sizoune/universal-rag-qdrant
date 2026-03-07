@@ -199,16 +199,10 @@ async def stream_chat_response(question: str, session_id: str, vector_store, his
     context_text = "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(context=context_text)
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-        ]
-    )
+    from langchain_core.messages import SystemMessage
 
     llm = get_llm()
-    formatted = prompt.format_messages(chat_history=history, input=question)
+    formatted = [SystemMessage(content=system_prompt)] + list(history) + [HumanMessage(content=question)]
 
     # Phase B: Async LLM streaming
     full_answer = []
