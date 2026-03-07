@@ -6,8 +6,24 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from langchain_core.messages import AIMessage, HumanMessage
+from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from starlette.responses import StreamingResponse
+
+# --- Prometheus Metrics ---
+_chat_requests = Counter("rag_chat_requests_total", "Total chat requests", ["type"])
+_ingest_operations = Counter("rag_ingest_operations_total", "Total ingest operations", ["source_type"])
+_file_operations = Counter("rag_file_operations_total", "Total file operations", ["operation"])
+_indexed_documents = Gauge("rag_indexed_documents_total", "Total indexed document chunks in Qdrant")
+_active_sessions = Gauge("rag_active_sessions", "Number of active chat sessions")
+_ingest_running = Gauge("rag_ingest_running", "1 if an ingest job is currently running")
+_request_duration = Histogram(
+    "rag_request_duration_seconds",
+    "Request duration in seconds",
+    ["endpoint"],
+    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
+)
 
 from src.api_auth import verify_api_key
 from src.api_models import (
@@ -246,6 +262,22 @@ def health():
     return {"status": "ok", "service": "rag-qdrant-api"}
 
 
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics():
+    """Prometheus metrics endpoint (public, no auth required)."""
+    # Update live gauges
+    _active_sessions.set(len(_session_histories))
+    with _ingest_status_lock:
+        _ingest_running.set(1 if _ingest_status["running"] else 0)
+    try:
+        stats = get_db_stats()
+        if "vectors_count" in stats:
+            _indexed_documents.set(stats["vectors_count"])
+    except Exception:
+        pass
+    return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 api_router = APIRouter(prefix="/api/v1", dependencies=[Depends(verify_api_key)])
 
 
@@ -278,11 +310,13 @@ def chat_endpoint(payload: ChatRequest):
     if not payload.question or not payload.question.strip():
         raise HTTPException(status_code=400, detail="question cannot be empty")
 
+    _chat_requests.labels(type="sync").inc()
     session_id = (payload.session_id or "default").strip() or "default"
     history = _session_histories.setdefault(session_id, [])
     chain = _get_or_create_chain()
 
-    response = chain.invoke({"input": payload.question, "chat_history": history})
+    with _request_duration.labels(endpoint="/chat").time():
+        response = chain.invoke({"input": payload.question, "chat_history": history})
     answer = response.get("answer", "No answer generated.")
     context_docs = response.get("context", [])
     sources = list(dict.fromkeys(doc.metadata.get("source", "Unknown") for doc in context_docs))
@@ -300,6 +334,7 @@ async def chat_stream_endpoint(payload: ChatRequest):
     if not payload.question or not payload.question.strip():
         raise HTTPException(status_code=400, detail="question cannot be empty")
 
+    _chat_requests.labels(type="stream").inc()
     session_id = (payload.session_id or "default").strip() or "default"
     history = _session_histories.setdefault(session_id, [])
     vector_store = _get_or_create_vector_store()
@@ -324,6 +359,7 @@ def ingest_web(payload: IngestWebRequest):
     if not payload.url or not payload.url.strip():
         raise HTTPException(status_code=400, detail="url cannot be empty")
 
+    _ingest_operations.labels(source_type="web").inc()
     with _ingest_lock:
         _set_ingest_status_start("ingest_web")
         status_message = "Web ingestion completed"
@@ -365,6 +401,7 @@ def ingest_web(payload: IngestWebRequest):
 
 @api_router.post("/ingest/file-path", response_model=OperationResponse)
 def ingest_file_path(payload: IngestPathRequest):
+    _ingest_operations.labels(source_type="file").inc()
     path_raw = (payload.path or "").strip()
     if not path_raw:
         raise HTTPException(status_code=400, detail="path cannot be empty")
@@ -420,6 +457,7 @@ def ingest_file_path(payload: IngestPathRequest):
 
 @api_router.post("/ingest/uploads", response_model=OperationResponse)
 def ingest_uploads():
+    _ingest_operations.labels(source_type="uploads").inc()
     uploads_dir = config.UPLOADS_DIR.strip() or "uploads"
     os.makedirs(uploads_dir, exist_ok=True)
 
@@ -580,6 +618,7 @@ def upload_file(file: UploadFile = File(...)):
 
 @api_router.put("/files/{source_id}", response_model=OperationResponse)
 def reingest_source(source_id: str):
+    _file_operations.labels(operation="reingest").inc()
     try:
         source = decode_source_id(source_id)
     except ValueError as exc:
@@ -660,6 +699,7 @@ def reingest_all_sources():
 
 @api_router.delete("/files/{source_id}", response_model=OperationResponse)
 def delete_source(source_id: str):
+    _file_operations.labels(operation="delete").inc()
     try:
         source = decode_source_id(source_id)
     except ValueError as exc:
