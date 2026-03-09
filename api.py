@@ -747,6 +747,34 @@ def reingest_all_sources():
             _set_ingest_status_finish(status_message)
 
 
+@api_router.post("/uploads/migrate-to-s3", response_model=OperationResponse)
+def migrate_uploads_to_s3():
+    """Move all local upload files to S3 and delete local copies."""
+    if not is_s3_enabled():
+        raise HTTPException(status_code=400, detail="S3 is not configured. Set S3_BUCKET env variable.")
+
+    uploads_dir = os.path.abspath(config.UPLOADS_DIR.strip() or "uploads")
+    if not os.path.isdir(uploads_dir):
+        return OperationResponse(success=True, message="No uploads directory found", processed_files=0)
+
+    moved = 0
+    failed = 0
+    for root, _, filenames in os.walk(uploads_dir):
+        for filename in filenames:
+            filepath = os.path.join(root, filename)
+            try:
+                upload_to_s3(filepath)
+                os.remove(filepath)
+                moved += 1
+            except Exception:
+                failed += 1
+
+    message = f"Migrated {moved} file(s) to S3"
+    if failed > 0:
+        message += f", {failed} failed"
+    return OperationResponse(success=failed == 0, message=message, processed_files=moved)
+
+
 @api_router.delete("/files/{source_id}", response_model=OperationResponse)
 def delete_source(source_id: str):
     _file_operations.labels(operation="delete").inc()
