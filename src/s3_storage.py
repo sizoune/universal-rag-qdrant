@@ -9,6 +9,7 @@ import os
 import tempfile
 
 import boto3
+from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 
 from src.config import config
@@ -39,12 +40,17 @@ def _s3_key(filename: str) -> str:
     return filename
 
 
+_transfer_config = TransferConfig(
+    multipart_threshold=5 * 1024 * 1024 * 1024,  # 5GB — effectively disable multipart
+)
+
+
 def upload_to_s3(local_path: str) -> str:
     """Upload a local file to S3. Returns the S3 key."""
     client = _get_client()
     filename = os.path.basename(local_path)
     key = _s3_key(filename)
-    client.upload_file(local_path, config.S3_BUCKET, key)
+    client.upload_file(local_path, config.S3_BUCKET, key, Config=_transfer_config)
     logger.info("Uploaded %s to s3://%s/%s", local_path, config.S3_BUCKET, key)
     return key
 
