@@ -41,11 +41,15 @@ class FileItem(BaseModel):
     source_type: str
     chunk_count: int
     last_seen: str | None = None
+    in_s3: bool = False
 
 
 class FileListResponse(BaseModel):
     items: list[FileItem]
     total: int
+    page: int = 1
+    page_size: int = 10
+    total_pages: int = 1
 
 
 class UploadFileItem(BaseModel):

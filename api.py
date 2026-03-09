@@ -526,9 +526,36 @@ def ingest_uploads():
 
 
 @api_router.get("/files", response_model=FileListResponse)
-def list_files():
-    items = [FileItem(**item) for item in list_indexed_sources(_get_or_create_vector_store())]
-    return FileListResponse(items=items, total=len(items))
+def list_files(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+):
+    all_sources = list_indexed_sources(_get_or_create_vector_store())
+
+    # Check S3 status for each source
+    s3_keys: set[str] = set()
+    if is_s3_enabled():
+        try:
+            s3_keys = {f["filename"] for f in list_s3_files()}
+        except Exception:
+            pass  # S3 unavailable — treat all as not in S3
+
+    items = []
+    for item in all_sources:
+        filename = os.path.basename(item["source"])
+        items.append(FileItem(**item, in_s3=filename in s3_keys))
+
+    total = len(items)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    start = (page - 1) * page_size
+    end = start + page_size
+    return FileListResponse(
+        items=items[start:end],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @api_router.get("/uploads", response_model=UploadFileListResponse)
