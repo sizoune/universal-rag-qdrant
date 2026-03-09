@@ -49,6 +49,12 @@ class Config:
     except ValueError:
         WEB_MAX_CONTENT_BYTES = 2097152
 
+    # === S3 Storage Config ===
+    S3_BUCKET = os.getenv("S3_BUCKET", "")
+    S3_PREFIX = os.getenv("S3_PREFIX", "rag-uploads")
+    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "")
+    S3_REGION = os.getenv("S3_REGION", "")
+
     # === Memory Config ===
     MEMORY_TYPE = os.getenv("MEMORY_TYPE", "buffer_window")
     MEMORY_SESSION_ID = os.getenv("MEMORY_SESSION_ID", "default_session")

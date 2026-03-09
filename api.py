@@ -48,6 +48,15 @@ from src.file_index import (
     list_indexed_sources,
 )
 from src.ingestion import get_text_splitter, load_local_document, parse_web_url, process_directory
+from src.s3_storage import (
+    is_s3_enabled,
+    upload_to_s3,
+    download_from_s3,
+    delete_from_s3,
+    get_s3_key_for_source,
+    file_exists_in_s3,
+    list_s3_files,
+)
 from src.vector_store import (
     delete_by_source,
     get_db_stats,
@@ -226,18 +235,37 @@ def _reingest_source(source: str) -> OperationResponse:
             added_chunks=len(docs),
         )
 
+    # If local file missing, try downloading from S3
+    s3_temp_path = None
+    actual_source = source
     if not os.path.exists(source) or not os.path.isfile(source):
-        raise HTTPException(status_code=404, detail="local source file not found")
+        if is_s3_enabled():
+            s3_key = get_s3_key_for_source(source)
+            if file_exists_in_s3(s3_key):
+                s3_temp_path = download_from_s3(s3_key)
+                actual_source = s3_temp_path
+            else:
+                raise HTTPException(status_code=404, detail="source file not found locally or in S3")
+        else:
+            raise HTTPException(status_code=404, detail="local source file not found")
 
-    deleted_chunks, added_chunks = _ingest_single_file(source, source_type="local")
-    if added_chunks == 0:
-        raise HTTPException(status_code=400, detail="source cannot be ingested")
-    return OperationResponse(
-        success=True,
-        message="Local source re-ingested",
-        deleted_chunks=deleted_chunks,
-        added_chunks=added_chunks,
-    )
+    try:
+        deleted_chunks, added_chunks = _ingest_single_file(actual_source, source_type="local")
+        if added_chunks == 0:
+            raise HTTPException(status_code=400, detail="source cannot be ingested")
+        return OperationResponse(
+            success=True,
+            message="Local source re-ingested" + (" (downloaded from S3)" if s3_temp_path else ""),
+            deleted_chunks=deleted_chunks,
+            added_chunks=added_chunks,
+        )
+    finally:
+        # Clean up temp file downloaded from S3
+        if s3_temp_path and os.path.exists(s3_temp_path):
+            os.remove(s3_temp_path)
+            temp_dir = os.path.dirname(s3_temp_path)
+            if temp_dir and not os.listdir(temp_dir):
+                os.rmdir(temp_dir)
 
 
 def _calculate_token_usage(context_docs, history, question: str, answer: str) -> TokenUsage:
@@ -466,9 +494,26 @@ def ingest_uploads():
         status_message = "Uploads ingestion completed"
         try:
             processed_files, deleted_chunks, added_chunks = _run_ingest_path(uploads_dir)
+
+            # After successful ingest, move files to S3 and clean up local
+            s3_moved = 0
+            if is_s3_enabled() and processed_files > 0:
+                for root, _, filenames in os.walk(uploads_dir):
+                    for filename in filenames:
+                        filepath = os.path.join(root, filename)
+                        try:
+                            upload_to_s3(filepath)
+                            os.remove(filepath)
+                            s3_moved += 1
+                        except Exception:
+                            pass  # keep local if S3 upload fails
+
+            message = "Uploads ingestion completed"
+            if s3_moved > 0:
+                message += f" ({s3_moved} file(s) moved to S3)"
             result = OperationResponse(
                 success=True,
-                message="Uploads ingestion completed",
+                message=message,
                 uploads_dir=uploads_dir,
                 processed_files=processed_files,
                 deleted_chunks=deleted_chunks,
@@ -557,6 +602,11 @@ def delete_upload(upload_id: str):
     with _ingest_lock:
         deleted_chunks = delete_by_source(upload_path)
         os.remove(upload_path)
+
+        # Also delete from S3 if enabled
+        if is_s3_enabled():
+            s3_key = get_s3_key_for_source(upload_path)
+            delete_from_s3(s3_key)
 
     return OperationResponse(
         success=True,
