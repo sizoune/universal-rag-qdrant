@@ -759,6 +759,7 @@ def migrate_uploads_to_s3():
 
     moved = 0
     failed = 0
+    errors: list[str] = []
     for root, _, filenames in os.walk(uploads_dir):
         for filename in filenames:
             filepath = os.path.join(root, filename)
@@ -766,12 +767,16 @@ def migrate_uploads_to_s3():
                 upload_to_s3(filepath)
                 os.remove(filepath)
                 moved += 1
-            except Exception:
+            except Exception as exc:
                 failed += 1
+                if len(errors) < 3:
+                    errors.append(f"{filename}: {exc}")
 
     message = f"Migrated {moved} file(s) to S3"
     if failed > 0:
         message += f", {failed} failed"
+        if errors:
+            message += " — " + "; ".join(errors)
     return OperationResponse(success=failed == 0, message=message, processed_files=moved)
 
 

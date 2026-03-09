@@ -23,7 +23,10 @@ def is_s3_enabled() -> bool:
 def _get_client():
     kwargs: dict = {}
     if config.S3_ENDPOINT_URL:
-        kwargs["endpoint_url"] = config.S3_ENDPOINT_URL
+        endpoint = config.S3_ENDPOINT_URL
+        if endpoint and not endpoint.startswith(("http://", "https://")):
+            endpoint = f"https://{endpoint}"
+        kwargs["endpoint_url"] = endpoint
     if config.S3_REGION:
         kwargs["region_name"] = config.S3_REGION
     return boto3.client("s3", **kwargs)
