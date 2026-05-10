@@ -6,6 +6,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
+from src.citation import build_source_items
 from src.config import config
 import logging
 
@@ -214,8 +215,8 @@ async def stream_chat_response(question: str, session_id: str, vector_store, his
 
     answer = "".join(full_answer)
 
-    # Yield sources
-    sources = list(dict.fromkeys(doc.metadata.get("source", "Unknown") for doc in context_docs))
+    # Yield sources as JSON-serializable list of SourceItem dicts
+    sources = [item.model_dump() for item in build_source_items(context_docs)]
     yield sources, "sources"
 
     # Yield token usage
@@ -255,17 +256,18 @@ def chat_interface(vector_store):
             answer = response.get("answer", "No answer generated.")
             print(f"AI: {answer}")
 
-            # Optionally print sources (deduplicated)
+            # Print structured sources (Indonesian display, deduplicated)
             context_docs = response.get("context", [])
             if context_docs:
-                seen = list(
-                    dict.fromkeys(
-                        doc.metadata.get("source", "Unknown") for doc in context_docs
-                    )
-                )
-                print("\n[Sources Used]:")
-                for i, source in enumerate(seen):
-                    print(f"  {i+1}. {source}")
+                sources = build_source_items(context_docs)
+                print("\n📚 Sumber:")
+                for i, src in enumerate(sources, start=1):
+                    label = src.filename or src.source
+                    print(f"  {i}. {label}")
+                    for loc in src.locations:
+                        print(f"     • {loc.display}")
+                        if loc.chunk_preview:
+                            print(f'       "{loc.chunk_preview}"')
 
             # Print token usage
             print_token_usage(context_docs, chat_history, user_input, answer)

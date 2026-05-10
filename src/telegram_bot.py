@@ -26,6 +26,7 @@ from src.vector_store import (
     initialize_vector_store,
 )
 from src.chat import get_chat_chain, estimate_tokens, SYSTEM_PROMPT_TEMPLATE
+from src.citation import build_source_items
 from src.cache_store import load_cache, save_cache, get_content_hash
 from src.utils import get_file_hash
 
@@ -300,17 +301,16 @@ async def handle_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Build reply
         reply_parts = [answer]
 
-        # Sources (deduplicated)
+        # Structured sources (Indonesian display, deduplicated)
         context_docs = response.get("context", [])
         if context_docs:
-            seen = list(
-                dict.fromkeys(
-                    doc.metadata.get("source", "Unknown") for doc in context_docs
-                )
-            )
-            reply_parts.append("\n📚 Sources:")
-            for i, source in enumerate(seen):
-                reply_parts.append(f"  {i+1}. {source}")
+            sources = build_source_items(context_docs)
+            reply_parts.append("\n📚 Sumber:")
+            for i, src in enumerate(sources, start=1):
+                label = src.filename or src.source
+                reply_parts.append(f"  {i}. {label}")
+                for loc in src.locations:
+                    reply_parts.append(f"     • {loc.display}")
 
         # Token usage
         context_text = (

@@ -240,15 +240,17 @@ def main():
                 print(f"AI: {answer}")
                 context_docs = response.get("context", [])
                 if context_docs:
-                    seen = list(
-                        dict.fromkeys(
-                            doc.metadata.get("source", "Unknown")
-                            for doc in context_docs
-                        )
-                    )
-                    print("\n[Sources Used]:")
-                    for i, source in enumerate(seen):
-                        print(f"  {i+1}. {source}")
+                    from src.citation import build_source_items
+
+                    sources = build_source_items(context_docs)
+                    print("\n📚 Sumber:")
+                    for i, src in enumerate(sources, start=1):
+                        label = src.filename or src.source
+                        print(f"  {i}. {label}")
+                        for loc in src.locations:
+                            print(f"     • {loc.display}")
+                            if loc.chunk_preview:
+                                print(f'       "{loc.chunk_preview}"')
                 print_token_usage(context_docs, [], args.question, answer)
             except Exception as e:
                 print(f"Error: {e}")

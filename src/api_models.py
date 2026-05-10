@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChatRequest(BaseModel):
@@ -29,9 +29,37 @@ class TokenUsage(BaseModel):
     total_estimate: int
 
 
+class LocationItem(BaseModel):
+    """Single citation location within a source document.
+
+    `display` is a pre-formatted Indonesian label (e.g. "Halaman 5 — Bab 2").
+    Structured fields (`page`, `url_fragment`, `line_range`) are optional and
+    used by clients for deep-linking only.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    display: str
+    chunk_preview: str
+    page: int | None = None
+    url_fragment: str | None = None
+    line_range: tuple[int, int] | None = None
+
+
+class SourceItem(BaseModel):
+    """A source document referenced in an answer, with one or more cited locations."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source: str
+    source_type: str
+    filename: str | None = None
+    locations: list[LocationItem]
+
+
 class ChatResponse(BaseModel):
     answer: str
-    sources: list[str]
+    sources: list[SourceItem]
     token_usage: TokenUsage
 
 

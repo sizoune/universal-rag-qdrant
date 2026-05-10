@@ -40,6 +40,7 @@ from src.api_models import (
     UploadFileListResponse,
 )
 from src.chat import SYSTEM_PROMPT_TEMPLATE, estimate_tokens, get_chat_chain, stream_chat_response
+from src.citation import build_source_items
 from src.config import config
 from src.file_index import (
     decode_source_id,
@@ -347,7 +348,7 @@ def chat_endpoint(payload: ChatRequest):
         response = chain.invoke({"input": payload.question, "chat_history": history})
     answer = response.get("answer", "No answer generated.")
     context_docs = response.get("context", [])
-    sources = list(dict.fromkeys(doc.metadata.get("source", "Unknown") for doc in context_docs))
+    sources = build_source_items(context_docs)
     token_usage = _calculate_token_usage(context_docs, history, payload.question, answer)
 
     history.extend([HumanMessage(content=payload.question), AIMessage(content=answer)])
