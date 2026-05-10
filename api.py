@@ -189,16 +189,13 @@ def _run_ingest_path(path: str) -> tuple[int, int, int]:
 def _ingest_single_file(filepath: str, source_type: str = "local") -> tuple[int, int]:
     abs_path = os.path.abspath(filepath)
     try:
-        docs = load_local_document(abs_path)
+        chunks = load_local_document(abs_path)
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if not docs:
+    if not chunks:
         return 0, 0
 
-    for doc in docs:
-        doc.metadata["source"] = abs_path
-        doc.metadata["source_type"] = source_type
-    chunks = get_text_splitter().split_documents(docs)
+    # load_local_document already returns final chunks; just stamp metadata.
     _enrich_docs_metadata(chunks, source=abs_path, source_type=source_type)
 
     deleted_chunks = delete_by_source(abs_path)

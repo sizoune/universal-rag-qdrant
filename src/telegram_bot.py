@@ -240,25 +240,22 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         await msg.edit_text(f"📄 Processing {filename}...")
-        docs = load_local_document(tmp_path)
+        # load_local_document returns final chunks already (layout-aware).
+        chunks = load_local_document(tmp_path)
 
-        if not docs:
+        if not chunks:
             await msg.edit_text(f"❌ Gagal memproses {filename}")
             return
 
-        # Set source to original filename
-        for doc in docs:
-            doc.metadata["source"] = filename
-            doc.metadata["source_type"] = "telegram_upload"
+        # Override source so the upload appears under its original filename
+        # (rather than the temp path) when listed in /api/v1/files.
+        for chunk in chunks:
+            chunk.metadata["source"] = filename
+            chunk.metadata["source_type"] = "telegram_upload"
 
         # Delete old + insert new
         deleted = delete_by_source(filename)
         status = f"🗑️ Dihapus {deleted} chunk lama\n" if deleted else ""
-
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        chunks = splitter.split_documents(docs)
 
         await msg.edit_text(f"{status}📦 Embedding {len(chunks)} chunks...")
         ingest_documents(chunks, _vector_store)

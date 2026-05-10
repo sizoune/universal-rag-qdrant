@@ -19,6 +19,7 @@ from src.utils import get_file_hash, is_file_allowed
 from src.cache_store import load_cache, save_cache, get_content_hash
 from src.code_parser import parse_code_file
 from src.config import config
+from src.layout_parser import chunk_elements, parse_docx, parse_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -193,18 +194,74 @@ def parse_web_url(url: str) -> tuple[list[Document], bool]:
 
 
 def load_local_document(filepath: str) -> list[Document]:
-    """Loads a single document based on its extension.
-    Uses Tree-sitter for code files (.py, .js), standard loaders for others."""
+    """Load a document and return final, ready-to-embed chunks.
+
+    No further splitting is needed by the caller — chunks already respect
+    the layout boundaries / max_chunk_size policy.
+
+    Strategy:
+    - .py / .js: Tree-sitter semantic chunks (legacy parser, already chunked).
+    - .pdf / .docx: layout-aware parser (`src.layout_parser`); falls back to
+      legacy text-only loaders when the layout parser raises.
+    - .csv / .txt / .md / others: legacy loader + character-based splitter.
+    """
     ext = os.path.splitext(filepath)[1].lower()
 
-    # Try Tree-sitter for code files
     if ext in (".py", ".js"):
         docs = parse_code_file(filepath)
         if docs is not None:
             for doc in docs:
                 doc.metadata["file_hash"] = get_file_hash(filepath)
             return docs
-        # Fallback to TextLoader if Tree-sitter failed
+        # Tree-sitter unavailable — fall through to legacy text path
+
+    if ext == ".pdf":
+        try:
+            elements = parse_pdf(filepath)
+            chunks = chunk_elements(elements)
+            return _enrich_local_chunks(chunks, filepath)
+        except Exception as exc:
+            logger.warning(
+                "Layout parser failed for PDF '%s': %s. Falling back to PyPDFLoader.",
+                filepath,
+                exc,
+            )
+            return _legacy_load_and_split(filepath)
+
+    if ext == ".docx":
+        try:
+            elements = parse_docx(filepath)
+            chunks = chunk_elements(elements)
+            return _enrich_local_chunks(chunks, filepath)
+        except Exception as exc:
+            logger.warning(
+                "Layout parser failed for DOCX '%s': %s. Falling back to Docx2txtLoader.",
+                filepath,
+                exc,
+            )
+            return _legacy_load_and_split(filepath)
+
+    return _legacy_load_and_split(filepath)
+
+
+def _enrich_local_chunks(chunks: list[Document], filepath: str) -> list[Document]:
+    """Add source/source_type/file_hash metadata to layout-parsed chunks."""
+    file_hash = get_file_hash(filepath)
+    for doc in chunks:
+        doc.metadata.setdefault("source", filepath)
+        doc.metadata.setdefault("source_type", "local")
+        doc.metadata["file_hash"] = file_hash
+    return chunks
+
+
+def _legacy_load_and_split(filepath: str) -> list[Document]:
+    """Legacy single-shot loader + character splitter (parser_version=1).
+
+    Used as a fallback when the layout parser fails, and as the primary path
+    for formats not covered by Tree-sitter or layout-aware parsing
+    (.csv, .txt, .md, .html, ...).
+    """
+    ext = os.path.splitext(filepath)[1].lower()
 
     try:
         if ext == ".pdf":
@@ -217,20 +274,25 @@ def load_local_document(filepath: str) -> list[Document]:
             loader = CSVLoader(filepath)
         elif ext == ".docx":
             loader = Docx2txtLoader(filepath)
-        else:  # Default for .txt, .md, .py, etc
+        else:
             loader = TextLoader(filepath, encoding="utf-8")
 
-        docs = loader.load()
-        for doc in docs:
-            doc.metadata["source_type"] = "local"
-            doc.metadata["file_hash"] = get_file_hash(filepath)
-
-        return docs
+        raw_docs = loader.load()
     except RuntimeError:
         raise
-    except Exception as e:
-        logger.error(f"Failed to load document '{filepath}': {e}")
+    except Exception as exc:
+        logger.error("Failed to load document '%s': %s", filepath, exc)
         return []
+
+    splitter = get_text_splitter()
+    chunks = splitter.split_documents(raw_docs)
+
+    file_hash = get_file_hash(filepath)
+    for doc in chunks:
+        doc.metadata["source_type"] = "local"
+        doc.metadata["file_hash"] = file_hash
+        doc.metadata.setdefault("parser_version", 1)
+    return chunks
 
 
 def process_directory(
@@ -253,8 +315,6 @@ def process_directory(
         return [], []
 
     cache = load_cache()
-    splitter = get_text_splitter()
-
     max_size_mb = max(1, config.UPLOAD_MAX_BYTES // (1024 * 1024))
 
     for root, _, files in os.walk(dir_path):
@@ -272,17 +332,16 @@ def process_directory(
                 skipped_count += 1
                 continue
 
-            # Process new/changed file
+            # Process new/changed file. load_local_document now returns
+            # FINAL chunks (no further splitting needed).
             logger.info(f"Loading '{filepath}'...")
             if on_file_start is not None:
                 on_file_start(filepath)
-            docs = load_local_document(filepath)
+            chunks = load_local_document(filepath)
 
-            if docs:
-                chunks = splitter.split_documents(docs)
+            if chunks:
                 all_chunks.extend(chunks)
                 changed_sources.append(filepath)
-                # Update cache
                 cache[filepath] = current_hash
 
     # Save cache after processing all files
