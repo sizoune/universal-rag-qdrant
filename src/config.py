@@ -8,18 +8,16 @@ class Config:
     # === Embedding Config ===
     EMBEDDER_BASE_URL = os.getenv("EMBEDDER_BASE_URL")
     EMBEDDER_API_KEY = os.getenv("EMBEDDER_API_KEY")
-    EMBEDDER_MODEL = os.getenv("EMBEDDER_MODEL", "text-embedding-3-small")
+    EMBEDDER_MODEL = os.getenv("EMBEDDER_MODEL", "bge-m3:latest")
     try:
-        EMBEDDER_DIMENSION = int(os.getenv("EMBEDDER_DIMENSION", "1536"))
+        EMBEDDER_DIMENSION = int(os.getenv("EMBEDDER_DIMENSION", "1024"))
     except ValueError:
-        EMBEDDER_DIMENSION = 1536
+        EMBEDDER_DIMENSION = 1024
 
     # === Qdrant Config ===
     QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
     QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
-    QDRANT_COLLECTION_NAME = os.getenv(
-        "QDRANT_COLLECTION_NAME", "universal_rag_collection"
-    )
+    QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "dokumen_v2")
 
     # === LLM Chat Config ===
     LLM_BASE_URL = os.getenv("LLM_BASE_URL", "")

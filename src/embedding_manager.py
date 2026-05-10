@@ -33,11 +33,12 @@ def get_embedder() -> Embeddings:
             "localhost" in base_url
             or "127.0.0.1" in base_url
             or "ollama" in base_url.lower()
+            or ":11434" in base_url
         )
         and not api_key
     ):
-        # Assuming Ollama if local and no API key (can be customized)
-        logger.info(f"Using Ollama Embeddings with model {model_name}")
+        # Default Ollama port (11434) or local — assume Ollama when no API key
+        logger.info(f"Using Ollama Embeddings with model {model_name} at {base_url}")
         return OllamaEmbeddings(base_url=base_url, model=model_name)
     elif base_url:
         # Fallback for OpenAI compatible APIs (Mistral, vLLM, text-generation-webui, etc)

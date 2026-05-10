@@ -40,7 +40,7 @@ def test_config_handles_invalid_types():
     from src.config import config
 
     # Should fallback to defaults if int() or float() casting fails
-    assert config.EMBEDDER_DIMENSION == 1536
+    assert config.EMBEDDER_DIMENSION == 1024  # bge-m3 default
     assert config.SEARCH_SCORE_THRESHOLD == 0.7
 
 
@@ -52,9 +52,11 @@ def test_config_handles_missing_vars(mock_load_dotenv):
     importlib.reload(src.config)
     from src.config import config
 
-    # Defaults applied
-    assert config.EMBEDDER_MODEL == "text-embedding-3-small"
+    # Defaults applied — bge-m3 / Ollama era
+    assert config.EMBEDDER_MODEL == "bge-m3:latest"
+    assert config.EMBEDDER_DIMENSION == 1024
     assert config.QDRANT_URL == "http://localhost:6333"
+    assert config.QDRANT_COLLECTION_NAME == "dokumen_v2"
     assert config.EMBEDDING_BATCH_SIZE == 100
     # LLM defaults
     assert config.LLM_BASE_URL == ""

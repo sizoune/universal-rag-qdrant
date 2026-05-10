@@ -6,3 +6,7 @@ __pycache__/
 *.pyc
 .cache/
 .pytest_cache/
+.omc/
+.coverage
+coverage.xml
+htmlcov/
