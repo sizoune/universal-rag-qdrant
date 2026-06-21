@@ -33,6 +33,21 @@ def is_reranker_enabled() -> bool:
     return str(enabled).lower() in ("true", "1", "yes")
 
 
+def warm_reranker() -> None:
+    """Preload the reranker at startup so the first real query doesn't pay the
+    cold-load (model download + ONNX session init, ~several seconds).
+    No-op when reranking is disabled; never raises (best-effort)."""
+    if not is_reranker_enabled():
+        return
+    try:
+        reranker = get_reranker()
+        # Tiny dummy rerank to force the ONNX inference session to initialise.
+        list(reranker.rerank("warmup", ["warmup document"]))
+        logger.info("Reranker warmed up.")
+    except Exception as e:
+        logger.warning("Reranker warm-up failed (continuing lazily): %s", e)
+
+
 def rerank(query: str, documents: list, top_k: int = None) -> list:
     """Re-rank documents using cross-encoder scoring.
 

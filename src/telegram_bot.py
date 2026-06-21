@@ -353,6 +353,12 @@ async def handle_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(app: Application):
     """Set bot commands after initialization."""
+    # Warm the reranker off-thread so the first chat isn't slowed by cold-load.
+    import threading
+    from src.reranker import warm_reranker
+
+    threading.Thread(target=warm_reranker, daemon=True, name="warm-reranker").start()
+
     commands = [
         BotCommand("start", "Mulai & help"),
         BotCommand("web", "Ingest URL: /web <url>"),

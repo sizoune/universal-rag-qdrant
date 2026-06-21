@@ -2,6 +2,7 @@ import json
 import os
 import threading
 import time
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile, status
@@ -66,7 +67,21 @@ from src.vector_store import (
     initialize_vector_store,
 )
 
-app = FastAPI(title="Universal RAG API", version="1.0.0")
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Warm the reranker off-thread at startup so the first chat query isn't
+    slowed by the model cold-load. Keeps startup/health-check immediate."""
+
+    def _warm():
+        from src.reranker import warm_reranker
+
+        warm_reranker()
+
+    threading.Thread(target=_warm, daemon=True, name="warm-reranker").start()
+    yield
+
+
+app = FastAPI(title="Universal RAG API", version="1.0.0", lifespan=_lifespan)
 
 _ingest_lock = threading.Lock()
 _ingest_status_lock = threading.Lock()
