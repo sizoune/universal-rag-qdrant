@@ -6,6 +6,7 @@ Start with: python main.py gateway
 import os
 import logging
 import tempfile
+import time
 from telegram import Update, BotCommand
 from telegram.ext import (
     Application,
@@ -292,7 +293,9 @@ async def handle_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     history = user_histories.get(user_id, [])
 
     try:
+        start = time.perf_counter()
         response = _chain.invoke({"input": question, "chat_history": history})
+        elapsed = time.perf_counter() - start
         answer = response.get("answer", "Tidak ada jawaban.")
 
         # Build reply
@@ -325,6 +328,7 @@ async def handle_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_parts.append(
             f"\n📊 Tokens: ~{t_input:,} in / ~{t_answer:,} out / ~{t_total:,} total"
         )
+        reply_parts.append(f"⏱️ Waktu respons: {elapsed:.1f}s")
 
         full_reply = "\n".join(reply_parts)
 

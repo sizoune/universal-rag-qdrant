@@ -1,6 +1,7 @@
 import json
 import os
 import threading
+import time
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile, status
@@ -341,8 +342,10 @@ def chat_endpoint(payload: ChatRequest):
     history = _session_histories.setdefault(session_id, [])
     chain = _get_or_create_chain()
 
+    start = time.perf_counter()
     with _request_duration.labels(endpoint="/chat").time():
         response = chain.invoke({"input": payload.question, "chat_history": history})
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
     answer = response.get("answer", "No answer generated.")
     context_docs = response.get("context", [])
     sources = build_source_items(context_docs)
@@ -352,7 +355,9 @@ def chat_endpoint(payload: ChatRequest):
     if len(history) > config.MEMORY_WINDOW_SIZE * 2:
         _session_histories[session_id] = history[-config.MEMORY_WINDOW_SIZE * 2 :]
 
-    return ChatResponse(answer=answer, sources=sources, token_usage=token_usage)
+    return ChatResponse(
+        answer=answer, sources=sources, token_usage=token_usage, elapsed_ms=elapsed_ms
+    )
 
 
 @api_router.post("/chat/stream")

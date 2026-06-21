@@ -61,6 +61,7 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list[SourceItem]
     token_usage: TokenUsage
+    elapsed_ms: int | None = None
 
 
 class FileItem(BaseModel):

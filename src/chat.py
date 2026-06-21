@@ -12,6 +12,7 @@ from langchain_ollama import ChatOllama
 from src.citation import build_source_items
 from src.config import config
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +203,7 @@ def get_chat_chain(vector_store):
 
 async def stream_chat_response(question: str, session_id: str, vector_store, history: list):
     """Async generator for SSE streaming chat. Two-phase: sync retrieval + async LLM streaming."""
+    start = time.perf_counter()
     llm = get_llm()
     retriever = build_history_aware_retriever(vector_store, llm)
 
@@ -239,7 +241,13 @@ async def stream_chat_response(question: str, session_id: str, vector_store, his
         + estimate_tokens(question)
     )
     t_output = estimate_tokens(answer)
-    yield {"input_estimate": t_input, "output_estimate": t_output, "total_estimate": t_input + t_output}, "token_usage"
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+    yield {
+        "input_estimate": t_input,
+        "output_estimate": t_output,
+        "total_estimate": t_input + t_output,
+        "elapsed_ms": elapsed_ms,
+    }, "token_usage"
 
     # Update history
     history.extend([HumanMessage(content=question), AIMessage(content=answer)])
@@ -266,10 +274,13 @@ def chat_interface(vector_store):
         print("\nThinking...")
 
         try:
+            start = time.perf_counter()
             response = chain.invoke({"input": user_input, "chat_history": chat_history})
+            elapsed = time.perf_counter() - start
 
             answer = response.get("answer", "No answer generated.")
             print(f"AI: {answer}")
+            print(f"\n⏱️  Waktu respons: {elapsed:.1f}s")
 
             # Print structured sources (Indonesian display, deduplicated)
             context_docs = response.get("context", [])
