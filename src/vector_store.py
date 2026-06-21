@@ -244,10 +244,15 @@ def ingest_documents(documents: list, vector_store) -> None:
     has_sparse = isinstance(sparse_vectors_config, dict) and "sparse" in sparse_vectors_config
     use_sparse = has_sparse and dense_is_named
 
-    # Compute dense embeddings
+    # Compute dense embeddings in batches. A single huge embed_documents() call
+    # can crash some backends — e.g. Ollama's model runner refuses/OOMs when one
+    # request carries hundreds of inputs. EMBEDDING_BATCH_SIZE caps each request.
     texts = [doc.page_content for doc in documents]
     logger.info(f"Computing dense embeddings for {len(texts)} chunks...")
-    dense_embeddings = embedder.embed_documents(texts)
+    embed_batch = max(1, config.EMBEDDING_BATCH_SIZE)
+    dense_embeddings = []
+    for i in range(0, len(texts), embed_batch):
+        dense_embeddings.extend(embedder.embed_documents(texts[i : i + embed_batch]))
 
     sparse_embeddings = None
     if use_sparse:

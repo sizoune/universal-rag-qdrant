@@ -118,3 +118,44 @@ def test_collection_creation_on_not_found(mock_get_embedder, mock_get_client):
     args, kwargs = mock_client.create_collection.call_args
     assert kwargs["collection_name"] == config.QDRANT_COLLECTION_NAME
     assert kwargs["vectors_config"].size == config.EMBEDDER_DIMENSION
+
+
+def test_ingest_documents_batches_dense_embeddings():
+    """Dense embeddings must be requested in batches of <= EMBEDDING_BATCH_SIZE.
+    A single huge embed_documents() call can crash backends like Ollama's runner.
+    """
+    from langchain_core.documents import Document
+
+    config = _get_config()
+    from src.vector_store import ingest_documents
+
+    batch_sizes = []
+
+    class _RecordingEmbedder:
+        def embed_documents(self, texts):
+            batch_sizes.append(len(texts))
+            return [[0.0] * config.EMBEDDER_DIMENSION for _ in texts]
+
+    client = MagicMock(spec=QdrantClient)
+    # dense-only unnamed vector config (not a dict) -> no sparse path
+    params = MagicMock()
+    params.vectors = MagicMock(size=config.EMBEDDER_DIMENSION)
+    params.sparse_vectors = None
+    client.get_collection.return_value.config.params = params
+
+    vector_store = MagicMock()
+    vector_store.client = client
+    vector_store.embeddings = _RecordingEmbedder()
+
+    n = config.EMBEDDING_BATCH_SIZE * 2 + 5
+    docs = [
+        Document(page_content=f"konten chunk yang cukup panjang agar lolos filter, nomor {i}", metadata={"source": "x.pdf"})
+        for i in range(n)
+    ]
+
+    ingest_documents(docs, vector_store)
+
+    assert sum(batch_sizes) == n  # every chunk embedded exactly once
+    assert all(b <= config.EMBEDDING_BATCH_SIZE for b in batch_sizes)
+    assert len(batch_sizes) == 3  # 100, 100, 5
+    assert client.upsert.called
