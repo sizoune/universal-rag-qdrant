@@ -7,6 +7,18 @@ from fastapi.testclient import TestClient
 def _load_api():
     import api as api_module
 
+    # api.py registers Prometheus collectors at module level against the global
+    # default REGISTRY. Reloading re-executes that registration, which raises
+    # "Duplicated timeseries". Clear the registry first so reload re-registers
+    # cleanly. Test-only concern — the app never reloads itself.
+    from prometheus_client import REGISTRY
+
+    for collector in list(getattr(REGISTRY, "_collector_to_names", {}).keys()):
+        try:
+            REGISTRY.unregister(collector)
+        except Exception:
+            pass
+
     return importlib.reload(api_module)
 
 
@@ -350,3 +362,28 @@ def test_ingest_status_endpoint(monkeypatch):
     assert body["running"] is True
     assert body["current_task"] == "ingest_uploads"
     assert body["current_source"] == "/home/linux/universal-rag-qdrant/uploads/a.pdf"
+
+
+def test_reset_chat_session_requires_auth():
+    api = _load_api()
+    client = TestClient(api.app)
+    resp = client.delete("/api/v1/chat/whatever")
+    assert resp.status_code == 401
+
+
+def test_reset_chat_session_clears_existing_history():
+    api = _load_api()
+    client = TestClient(api.app)
+    api._session_histories["sess-x"] = ["m1", "m2"]
+    resp = client.delete("/api/v1/chat/sess-x", headers=_auth_header())
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+    assert "sess-x" not in api._session_histories
+
+
+def test_reset_unknown_session_is_still_ok():
+    api = _load_api()
+    client = TestClient(api.app)
+    resp = client.delete("/api/v1/chat/nope", headers=_auth_header())
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
