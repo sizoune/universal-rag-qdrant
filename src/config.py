@@ -67,11 +67,15 @@ class Config:
         MAX_SEARCH_RESULTS = int(os.getenv("MAX_SEARCH_RESULTS", "4"))
         EMBEDDING_BATCH_SIZE = int(os.getenv("EMBEDDING_BATCH_SIZE", "100"))
         MAX_BATCH_SCANNER_RETRIES = int(os.getenv("MAX_BATCH_SCANNER_RETRIES", "3"))
+        # Chunks shorter than this (after stripping) are treated as boilerplate
+        # and dropped at ingest. Real content chunks run ~500+ chars here.
+        MIN_CHUNK_CHARS = int(os.getenv("MIN_CHUNK_CHARS", "40"))
     except ValueError:
         SEARCH_SCORE_THRESHOLD = 0.7
         MAX_SEARCH_RESULTS = 4
         EMBEDDING_BATCH_SIZE = 100
         MAX_BATCH_SCANNER_RETRIES = 3
+        MIN_CHUNK_CHARS = 40
 
     # === Hybrid Search & Re-ranking ===
     SEARCH_MODE = os.getenv("SEARCH_MODE", "dense")  # "dense" or "hybrid"

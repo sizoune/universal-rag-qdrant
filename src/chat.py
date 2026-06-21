@@ -1,4 +1,7 @@
-from langchain_classic.chains import create_retrieval_chain
+from langchain_classic.chains import (
+    create_history_aware_retriever,
+    create_retrieval_chain,
+)
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
@@ -14,6 +17,15 @@ logger = logging.getLogger(__name__)
 
 # Basic In-Memory Chat History
 chat_history = []
+
+# Condense prompt: rewrite a follow-up question into a standalone one using
+# chat history, so retrieval works for anaphora ("berapa harganya?" -> "..").
+CONDENSE_SYSTEM_PROMPT = (
+    "Diberikan riwayat percakapan dan pertanyaan terakhir pengguna yang mungkin "
+    "merujuk konteks dalam riwayat, susun ulang menjadi sebuah pertanyaan mandiri "
+    "yang bisa dipahami tanpa riwayat. JANGAN dijawab — cukup susun ulang bila "
+    "perlu, jika tidak kembalikan apa adanya. Pertahankan bahasa aslinya."
+)
 
 # System prompt (defined once for token counting)
 SYSTEM_PROMPT_TEMPLATE = (
@@ -112,40 +124,65 @@ def get_llm():
         return ChatOpenAI(model=model_name, api_key=api_key)
 
 
+def build_retriever(vector_store):
+    """Single source of truth for the active retriever (dense+fallback or hybrid).
+    Used by chat, streaming, AND the eval harness so all three retrieve identically."""
+    if config.SEARCH_MODE.lower() == "hybrid":
+        logger.info("Using HYBRID search mode (dense + sparse BM25)")
+        from src.hybrid_retriever import HybridRetriever
+
+        return HybridRetriever(
+            vector_store=vector_store,
+            score_threshold=config.SEARCH_SCORE_THRESHOLD,
+            k=config.MAX_SEARCH_RESULTS,
+        )
+
+    logger.info("Using DENSE search mode")
+    threshold_retriever = vector_store.as_retriever(
+        search_type="similarity_score_threshold",
+        search_kwargs={
+            "score_threshold": config.SEARCH_SCORE_THRESHOLD,
+            "k": config.MAX_SEARCH_RESULTS,
+        },
+    )
+    similarity_retriever = vector_store.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": config.MAX_SEARCH_RESULTS},
+    )
+    return DenseThresholdFallbackRetriever(
+        threshold_retriever=threshold_retriever,
+        similarity_retriever=similarity_retriever,
+    )
+
+
+def build_history_aware_retriever(vector_store, llm):
+    """Wrap the base retriever so the latest question is condensed against
+    chat_history into a standalone query BEFORE retrieval.
+
+    With empty history (a fresh session) LangChain passes the input straight to
+    the base retriever — no rewrite, no extra LLM call — so a new session behaves
+    exactly like a first turn. History flows in at invoke time, never baked in,
+    so one instance safely serves every session.
+    """
+    condense_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", CONDENSE_SYSTEM_PROMPT),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+    return create_history_aware_retriever(
+        llm, build_retriever(vector_store), condense_prompt
+    )
+
+
 def get_chat_chain(vector_store):
     """Sets up the retrieval + LLM conversational chain.
     Supports dense (default) and hybrid (dense+sparse) search modes,
     with optional cross-encoder re-ranking.
     """
     llm = get_llm()
-    search_mode = config.SEARCH_MODE.lower()
-
-    if search_mode == "hybrid":
-        logger.info("Using HYBRID search mode (dense + sparse BM25)")
-        from src.hybrid_retriever import HybridRetriever
-
-        retriever = HybridRetriever(
-            vector_store=vector_store,
-            score_threshold=config.SEARCH_SCORE_THRESHOLD,
-            k=config.MAX_SEARCH_RESULTS,
-        )
-    else:
-        logger.info("Using DENSE search mode")
-        threshold_retriever = vector_store.as_retriever(
-            search_type="similarity_score_threshold",
-            search_kwargs={
-                "score_threshold": config.SEARCH_SCORE_THRESHOLD,
-                "k": config.MAX_SEARCH_RESULTS,
-            },
-        )
-        similarity_retriever = vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": config.MAX_SEARCH_RESULTS},
-        )
-        retriever = DenseThresholdFallbackRetriever(
-            threshold_retriever=threshold_retriever,
-            similarity_retriever=similarity_retriever,
-        )
+    retriever = build_history_aware_retriever(vector_store, llm)
 
     system_prompt = SYSTEM_PROMPT_TEMPLATE
 
@@ -165,44 +202,18 @@ def get_chat_chain(vector_store):
 
 async def stream_chat_response(question: str, session_id: str, vector_store, history: list):
     """Async generator for SSE streaming chat. Two-phase: sync retrieval + async LLM streaming."""
-    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    llm = get_llm()
+    retriever = build_history_aware_retriever(vector_store, llm)
 
-    search_mode = config.SEARCH_MODE.lower()
-
-    if search_mode == "hybrid":
-        from src.hybrid_retriever import HybridRetriever
-
-        retriever = HybridRetriever(
-            vector_store=vector_store,
-            score_threshold=config.SEARCH_SCORE_THRESHOLD,
-            k=config.MAX_SEARCH_RESULTS,
-        )
-    else:
-        threshold_retriever = vector_store.as_retriever(
-            search_type="similarity_score_threshold",
-            search_kwargs={
-                "score_threshold": config.SEARCH_SCORE_THRESHOLD,
-                "k": config.MAX_SEARCH_RESULTS,
-            },
-        )
-        similarity_retriever = vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": config.MAX_SEARCH_RESULTS},
-        )
-        retriever = DenseThresholdFallbackRetriever(
-            threshold_retriever=threshold_retriever,
-            similarity_retriever=similarity_retriever,
-        )
-
-    # Phase A: Sync retrieval
-    context_docs = retriever.invoke(question)
+    # Phase A: Sync history-aware retrieval (condense vs history, then search).
+    # Empty history -> input passes straight through (fresh-session behaviour).
+    context_docs = retriever.invoke({"input": question, "chat_history": history})
 
     context_text = "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(context=context_text)
 
     from langchain_core.messages import SystemMessage
 
-    llm = get_llm()
     formatted = [SystemMessage(content=system_prompt)] + list(history) + [HumanMessage(content=question)]
 
     # Phase B: Async LLM streaming
@@ -238,7 +249,7 @@ async def stream_chat_response(question: str, session_id: str, vector_store, his
 
 def chat_interface(vector_store):
     """Interactive CLI loop for chatting."""
-    print("\n--- Interactive Chat (Type '/exit' to quit) ---")
+    print("\n--- Interactive Chat ('/new' sesi baru, '/exit' keluar) ---")
     chain = get_chat_chain(vector_store)
 
     global chat_history
@@ -247,6 +258,10 @@ def chat_interface(vector_store):
         user_input = input("\nYou: ")
         if user_input.strip() == "/exit":
             break
+        if user_input.strip() in ("/new", "/reset"):
+            chat_history.clear()
+            print("🔄 Sesi baru — riwayat chat dikosongkan.")
+            continue
 
         print("\nThinking...")
 

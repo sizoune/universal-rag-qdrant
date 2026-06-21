@@ -205,6 +205,19 @@ def ingest_documents(documents: list, vector_store) -> None:
     if not documents:
         return
 
+    # Drop boilerplate chunks (footer URLs, "Sumber:" stamps, fragments) before
+    # spending embeddings on them. Single choke point — covers file/web/dir.
+    from src.ingestion import drop_low_value_chunks
+
+    before = len(documents)
+    documents = drop_low_value_chunks(documents)
+    if before != len(documents):
+        logger.info(
+            "Filtered %d boilerplate chunk(s); %d remain.", before - len(documents), len(documents)
+        )
+    if not documents:
+        return
+
     import uuid
     from src.config import config
 

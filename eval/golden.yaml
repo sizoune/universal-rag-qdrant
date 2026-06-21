@@ -1,0 +1,60 @@
+# Golden retrieval eval set.
+#
+# Each entry = one question + what a CORRECT retrieved chunk must contain.
+# A question "hits" if any retrieved chunk (within MAX_SEARCH_RESULTS) matches
+# ANY expect_substring (case-insensitive, in the chunk text) OR ANY
+# expect_source (case-insensitive substring of metadata.source — so the bare
+# filename matches regardless of /app/uploads vs /tmp/rag_s3_* path prefix).
+#
+# Run:  python eval_retrieval.py
+# Tweak SEARCH_SCORE_THRESHOLD / MAX_SEARCH_RESULTS / SEARCH_MODE in .env and
+# re-run to see whether the number moves.
+#
+# These starter entries were seeded from the prod collection
+# `universal_rag_collection` (Tabalong BPS docs) on 2026-06-21. They lean
+# "findable" by design. ADD YOUR OWN real user questions — especially messy,
+# conversational, paraphrased ones — to make the number trustworthy.
+
+- question: "Berapa luas wilayah Kecamatan Kelua?"
+  expect_source: ["kecamatan-kelua-dalam-angka-2025"]
+  expect_substring: ["53,36", "Kelua"]
+
+- question: "Berapa total pelanggan air PT Air Minum Tabalong?"
+  expect_source: ["kabupaten-tabalong-dalam-angka-2026"]
+  expect_substring: ["pelanggan air", "37.777"]
+
+- question: "Berapa luas panen padi di Kabupaten Tabalong tahun 2024?"
+  expect_source: ["statistik-daerah-kabupaten-tabalong-2025"]
+  expect_substring: ["luas panen padi", "Kerangka Sampel Area"]
+
+- question: "Program apa yang dikembangkan Dispersip Tabalong untuk perpustakaan?"
+  expect_substring: ["Pustaka Bisa", "Dispersip"]
+
+- question: "Apa yang dimaksud Puskesmas dengan layanan rawat inap?"
+  expect_source: ["statistik-potensi-desa-kabupaten-tabalong-2025"]
+  expect_substring: ["rawat inap", "Inpatient"]
+
+# DISCRIMINATOR: this question MISSES on SEARCH_MODE=dense (boilerplate chunks —
+# "Sumber: BPS", repeated bps.go.id URLs — crowd top-k) but HITS at r1 on
+# hybrid+reranker. Keep it: it's the entry that proves hybrid earns its keep.
+# Flip SEARCH_MODE in .env and re-run to watch this one drop.
+
+- question: "Berapa produksi tanaman biofarmaka di Kecamatan Murung Pudak?"
+  expect_source: ["kecamatan-murung-pudak-dalam-angka-2025"]
+  expect_substring: ["Biofarmaka", "biofarmaka"]
+
+- question: "Bagaimana sebaran jenis atap bangunan rumah tangga di Kabupaten Tabalong?"
+  expect_source: ["indikator-kesejahteraan-rakyat-kabupaten-tabalong-2025"]
+  expect_substring: ["Jenis Atap"]
+
+- question: "Jenis permukaan jalan antar desa di Kabupaten Tabalong apa saja?"
+  expect_source: ["statistik-potensi-desa-kabupaten-tabalong-2025"]
+  expect_substring: ["permukaan jalan", "Aspal"]
+
+- question: "Berapa jumlah Sekolah Dasar di Kecamatan Tanjung?"
+  expect_source: ["kecamatan-tanjung-dalam-angka-2025"]
+  expect_substring: ["Sekolah Dasar", "Elementary School"]
+
+- question: "Berapa luas wilayah Kecamatan Banua Lawas?"
+  expect_source: ["kecamatan-banua-lawas-dalam-angka-2025"]
+  expect_substring: ["Banua Lawas"]

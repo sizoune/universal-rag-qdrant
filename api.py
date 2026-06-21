@@ -380,6 +380,25 @@ async def chat_stream_endpoint(payload: ChatRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+@api_router.delete("/chat/{session_id}", response_model=OperationResponse)
+def reset_chat_session(session_id: str):
+    """Clear an existing session's conversation history in place.
+
+    Starting a brand-new session_id is already a clean slate; use this only to
+    reset history for an id the client wants to keep reusing.
+    """
+    existed = _session_histories.pop(session_id, None) is not None
+    _active_sessions.set(len(_session_histories))
+    return OperationResponse(
+        success=True,
+        message=(
+            f"Riwayat sesi '{session_id}' direset."
+            if existed
+            else f"Sesi '{session_id}' tidak punya riwayat."
+        ),
+    )
+
+
 @api_router.post("/ingest/web", response_model=OperationResponse)
 def ingest_web(payload: IngestWebRequest):
     if not payload.url or not payload.url.strip():
