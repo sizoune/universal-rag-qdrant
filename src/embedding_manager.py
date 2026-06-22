@@ -23,8 +23,8 @@ def get_embedder() -> Embeddings:
         return OpenAIEmbeddings(
             openai_api_key=api_key, model=model_name, openai_api_base=base_url
         )
-    elif api_key and api_key.startswith("AIza"):
-        # Google Gemini heuristic
+    elif api_key and api_key.startswith(("AIza", "AQ.")):
+        # Google Gemini heuristic: legacy "AIza..." and newer "AQ...." keys
         logger.info(f"Using Google Generative AI Embeddings with model {model_name}")
         return GoogleGenerativeAIEmbeddings(model=model_name, google_api_key=api_key)
     elif (

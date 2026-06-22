@@ -103,7 +103,8 @@ def get_llm():
     if base_url and "api.openai.com" in base_url:
         logger.info(f"Using OpenAI Chat with model {model_name}")
         return ChatOpenAI(model=model_name, api_key=api_key)
-    elif api_key and api_key.startswith("AIza"):
+    elif api_key and api_key.startswith(("AIza", "AQ.")):
+        # Gemini API keys: legacy "AIza..." and newer "AQ...." format
         logger.info(f"Using Google Gemini Chat with model {model_name}")
         return ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
     elif base_url and ("ollama" in base_url.lower() or ":11434" in base_url):
