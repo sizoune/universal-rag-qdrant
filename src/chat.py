@@ -185,11 +185,12 @@ def get_chat_chain(vector_store):
     llm = get_llm()
     retriever = build_history_aware_retriever(vector_store, llm)
 
-    system_prompt = SYSTEM_PROMPT_TEMPLATE
-
+    # {extra_system} carries optional per-request client instructions; the caller
+    # always passes it (empty string when unused), so the template never errors.
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", system_prompt),
+            ("system", SYSTEM_PROMPT_TEMPLATE),
+            ("system", "{extra_system}"),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{input}"),
         ]
@@ -201,7 +202,9 @@ def get_chat_chain(vector_store):
     return rag_chain
 
 
-async def stream_chat_response(question: str, session_id: str, vector_store, history: list):
+async def stream_chat_response(
+    question: str, session_id: str, vector_store, history: list, extra_system: str = ""
+):
     """Async generator for SSE streaming chat. Two-phase: sync retrieval + async LLM streaming."""
     start = time.perf_counter()
     llm = get_llm()
@@ -216,7 +219,10 @@ async def stream_chat_response(question: str, session_id: str, vector_store, his
 
     from langchain_core.messages import SystemMessage
 
-    formatted = [SystemMessage(content=system_prompt)] + list(history) + [HumanMessage(content=question)]
+    messages = [SystemMessage(content=system_prompt)]
+    if extra_system:
+        messages.append(SystemMessage(content=extra_system))
+    formatted = messages + list(history) + [HumanMessage(content=question)]
 
     # Phase B: Async LLM streaming
     full_answer = []

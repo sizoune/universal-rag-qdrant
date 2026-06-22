@@ -359,7 +359,13 @@ def chat_endpoint(payload: ChatRequest):
 
     start = time.perf_counter()
     with _request_duration.labels(endpoint="/chat").time():
-        response = chain.invoke({"input": payload.question, "chat_history": history})
+        response = chain.invoke(
+            {
+                "input": payload.question,
+                "chat_history": history,
+                "extra_system": (payload.system_prompt or "").strip(),
+            }
+        )
     elapsed_ms = int((time.perf_counter() - start) * 1000)
     answer = response.get("answer", "No answer generated.")
     context_docs = response.get("context", [])
@@ -387,7 +393,8 @@ async def chat_stream_endpoint(payload: ChatRequest):
 
     async def event_generator():
         async for data, event_type in stream_chat_response(
-            payload.question, session_id, vector_store, history
+            payload.question, session_id, vector_store, history,
+            (payload.system_prompt or "").strip(),
         ):
             if event_type == "token":
                 yield f"data: {json.dumps({'type': 'token', 'content': data})}\n\n"

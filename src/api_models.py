@@ -4,6 +4,11 @@ from pydantic import BaseModel, ConfigDict, Field
 class ChatRequest(BaseModel):
     question: str = Field(..., description="User question")
     session_id: str | None = Field(default="default", description="Chat session id")
+    system_prompt: str | None = Field(
+        default=None,
+        max_length=8000,
+        description="Extra system instructions appended to the base prompt for this request",
+    )
 
 
 class IngestWebRequest(BaseModel):

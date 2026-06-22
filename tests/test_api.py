@@ -364,6 +364,46 @@ def test_ingest_status_endpoint(monkeypatch):
     assert body["current_source"] == "/home/linux/universal-rag-qdrant/uploads/a.pdf"
 
 
+def test_chat_passes_system_prompt_to_chain(monkeypatch):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    captured = {}
+
+    class _StubChain:
+        def invoke(self, payload):
+            captured.update(payload)
+            return {"answer": "ok", "context": []}
+
+    monkeypatch.setattr(api, "_get_or_create_chain", lambda: _StubChain())
+    resp = client.post(
+        "/api/v1/chat",
+        headers=_auth_header(),
+        json={"question": "halo", "system_prompt": "  Jawab singkat.  "},
+    )
+    assert resp.status_code == 200
+    assert captured["extra_system"] == "Jawab singkat."
+
+
+def test_chat_without_system_prompt_passes_empty(monkeypatch):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    captured = {}
+
+    class _StubChain:
+        def invoke(self, payload):
+            captured.update(payload)
+            return {"answer": "ok", "context": []}
+
+    monkeypatch.setattr(api, "_get_or_create_chain", lambda: _StubChain())
+    resp = client.post(
+        "/api/v1/chat", headers=_auth_header(), json={"question": "halo"}
+    )
+    assert resp.status_code == 200
+    assert captured["extra_system"] == ""
+
+
 def test_reset_chat_session_requires_auth():
     api = _load_api()
     client = TestClient(api.app)

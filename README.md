@@ -163,6 +163,17 @@ curl -X POST "http://localhost:8000/api/v1/chat" \
   -d '{"question":"apa itu SaaS?","session_id":"fe-user-1"}'
 ```
 
+Field `system_prompt` (opsional, maks. 8000 karakter) menambahkan instruksi
+sistem per-request — ditambahkan ke prompt dasar, bukan menggantinya. Berlaku
+untuk `POST /api/v1/chat` dan `POST /api/v1/chat/stream`:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/chat" \
+  -H "Authorization: Bearer change-me" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"apa itu SaaS?","system_prompt":"Jawab singkat dalam 1 kalimat."}'
+```
+
 ## Advanced RAG (Ringkas)
 
 - `SEARCH_MODE="dense"`: retrieval semantic biasa
