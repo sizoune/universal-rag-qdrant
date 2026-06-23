@@ -82,5 +82,23 @@ class Config:
     RERANKER_ENABLED = os.getenv("RERANKER_ENABLED", "false")
     RERANKER_MODEL = os.getenv("RERANKER_MODEL", "Xenova/ms-marco-MiniLM-L-6-v2")
 
+    # === Web Search Fallback (9router /v1/search) ===
+    WEB_SEARCH_ENABLED = os.getenv("WEB_SEARCH_ENABLED", "false").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    # Endpoint POST penuh. Kosong -> diturunkan dari LLM_BASE_URL + "/search".
+    WEB_SEARCH_URL = os.getenv("WEB_SEARCH_URL", "")
+    # Bearer untuk search. Kosong -> fallback ke LLM_API_KEY.
+    WEB_SEARCH_API_KEY = os.getenv("WEB_SEARCH_API_KEY", "")
+    WEB_SEARCH_PROVIDER = os.getenv("WEB_SEARCH_PROVIDER", "search-combo")
+    try:
+        WEB_SEARCH_MAX_RESULTS = int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5"))
+        WEB_SEARCH_TIMEOUT = int(os.getenv("WEB_SEARCH_TIMEOUT", "10"))
+    except ValueError:
+        WEB_SEARCH_MAX_RESULTS = 5
+        WEB_SEARCH_TIMEOUT = 10
 
 config = Config()

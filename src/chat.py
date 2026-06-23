@@ -4,14 +4,16 @@ from langchain_classic.chains import (
 )
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.retrievers import BaseRetriever
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from src.citation import build_source_items
 from src.config import config
+from src.web_search import search_web, web_context_text, web_results_to_documents
 from datetime import date
+import asyncio
 import logging
 import time
 
@@ -49,6 +51,24 @@ SYSTEM_PROMPT_TEMPLATE = (
     "You are a helpful AI assistant connected to a knowledge base.\n"
     "Use the following pieces of retrieved context to answer the user's question.\n"
     "If the answer is not in the context, just say that you don't know based on the provided documents. "
+    "Do not make up information that isn't supported by the context.\n\n"
+    "Context:\n{context}"
+)
+
+NO_ANSWER_SENTINEL = "NO_ANSWER"
+
+NOT_FOUND_MSG = (
+    "Maaf, jawaban tidak ditemukan di dokumen maupun hasil pencarian web."
+)
+
+# Varian prompt untuk jalur web-fallback: ganti klausa "say you don't know"
+# dengan instruksi sentinel agar deteksi deterministik. Tetap SATU system message.
+SENTINEL_SYSTEM_TEMPLATE = (
+    "You are a helpful AI assistant connected to a knowledge base.\n"
+    "Use the following pieces of retrieved context to answer the user's question.\n"
+    f"If the answer is NOT in the context, reply with EXACTLY `{NO_ANSWER_SENTINEL}` "
+    "and nothing else (no other words, no punctuation, no explanation). "
+    "If the answer IS in the context, answer normally and never output that token.\n"
     "Do not make up information that isn't supported by the context.\n\n"
     "Context:\n{context}"
 )
@@ -227,53 +247,172 @@ def get_chat_chain(vector_store):
     return rag_chain
 
 
+def _build_system_message(context_text: str, extra_system: str, with_sentinel: bool):
+    """Bangun SATU SystemMessage (lihat build_qa_prompt: my-combo hanya menghormati
+    system message pertama). with_sentinel=True memakai template sentinel."""
+    template = SENTINEL_SYSTEM_TEMPLATE if with_sentinel else SYSTEM_PROMPT_TEMPLATE
+    parts = [template.format(context=context_text)]
+    if extra_system:
+        parts.append(extra_system)
+    parts.append(_date_guidance())
+    return SystemMessage(content="\n\n".join(parts))
+
+
+def answer_with_web_fallback(
+    question: str, history: list, vector_store, extra_system: str = ""
+) -> tuple[str, list, bool, list]:
+    """Jawab dari RAG; jika model tak bisa menjawab dari konteks (sentinel),
+    fallback ke web search lalu jawab ulang.
+    Return (answer, sources, web_used, context_docs_used).
+    context_docs_used adalah list Document yang benar-benar dikonsumsi LLM:
+      - RAG menjawab -> context_docs dari retrieval
+      - Fallback web -> web_results_to_documents(results)
+      - Fallback, tak ada hasil web -> []
+    Caller wajib menggerbang ini pada web aktif (request + global enabled)."""
+    llm = get_llm()
+    retriever = build_history_aware_retriever(vector_store, llm)
+    context_docs = retriever.invoke({"input": question, "chat_history": history})
+    context_text = (
+        "\n".join(d.page_content for d in context_docs) if context_docs else ""
+    )
+
+    sys_msg = _build_system_message(context_text, extra_system, with_sentinel=True)
+    messages = [sys_msg] + list(history) + [HumanMessage(content=question)]
+    answer = (llm.invoke(messages).content or "").strip()
+
+    if answer != NO_ANSWER_SENTINEL:
+        return answer, build_source_items(context_docs), False, context_docs
+
+    # ponytail: query web pakai pertanyaan mentah; follow-up anaforik bisa
+    # kurang presisi. Upgrade = condense pakai history (panggilan LLM ke-3).
+    results = search_web(question)
+    if not results:
+        return NOT_FOUND_MSG, [], False, []
+
+    web_docs = web_results_to_documents(results)
+    web_sys = _build_system_message(
+        web_context_text(results), extra_system, with_sentinel=False
+    )
+    web_messages = [web_sys] + list(history) + [HumanMessage(content=question)]
+    web_answer = (llm.invoke(web_messages).content or "").strip()
+    return web_answer, build_source_items(web_docs), True, web_docs
+
+
 async def stream_chat_response(
-    question: str, session_id: str, vector_store, history: list, extra_system: str = ""
+    question: str,
+    session_id: str,
+    vector_store,
+    history: list,
+    extra_system: str = "",
+    enable_web_search: bool = False,
 ):
-    """Async generator for SSE streaming chat. Two-phase: sync retrieval + async LLM streaming."""
+    """Async generator untuk SSE streaming. Dua fase: retrieval sync + LLM stream.
+    enable_web_search=True menambah deteksi sentinel + fallback web."""
     start = time.perf_counter()
     llm = get_llm()
     retriever = build_history_aware_retriever(vector_store, llm)
 
-    # Phase A: Sync history-aware retrieval (condense vs history, then search).
-    # Empty history -> input passes straight through (fresh-session behaviour).
+    # Phase A: retrieval history-aware (kosong -> input lewat apa adanya).
     context_docs = retriever.invoke({"input": question, "chat_history": history})
-
-    context_text = "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
-
-    from langchain_core.messages import SystemMessage
-
-    # ONE system message only — my-combo ignores the context when given multiple
-    # system messages (see get_chat_chain). Fold extra + date guidance into it.
-    parts = [SYSTEM_PROMPT_TEMPLATE.format(context=context_text)]
-    if extra_system:
-        parts.append(extra_system)
-    parts.append(_date_guidance())
-    formatted = (
-        [SystemMessage(content="\n\n".join(parts))]
-        + list(history)
-        + [HumanMessage(content=question)]
+    context_text = (
+        "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
     )
 
-    # Phase B: Async LLM streaming
-    full_answer = []
-    async for chunk in llm.astream(formatted):
-        token = chunk.content if hasattr(chunk, "content") else str(chunk)
-        if token:
-            full_answer.append(token)
-            yield token, "token"
+    web_used = False
+    sources_docs = context_docs
+    # Konteks yang benar-benar dikonsumsi LLM (untuk estimasi token akurat).
+    # Default = konteks RAG; akan diganti dengan web_context_text jika fallback.
+    token_est_context = context_text
 
-    answer = "".join(full_answer)
+    if not enable_web_search:
+        # Jalur lama — tidak berubah.
+        sys_msg = _build_system_message(context_text, extra_system, with_sentinel=False)
+        formatted = [sys_msg] + list(history) + [HumanMessage(content=question)]
+        full_answer = []
+        async for chunk in llm.astream(formatted):
+            token = chunk.content if hasattr(chunk, "content") else str(chunk)
+            if token:
+                full_answer.append(token)
+                yield token, "token"
+        answer = "".join(full_answer)
+    else:
+        # Jalur web-fallback: stream call #1 dengan supresi sentinel berbuffer.
+        # ponytail: buffer ditahan selama akumulasi masih prefiks "NO_ANSWER";
+        # begitu menyimpang -> flush. Bisa menunda <=1 token di kasus jawaban
+        # yang kebetulan diawali "N". Trade-off untuk mencegah sentinel bocor.
+        # ponytail: assumes the model obeys "emit EXACTLY NO_ANSWER, nothing else".
+        # If it appends text after the token, the buffer flushes it (sentinel could
+        # surface). Sync path uses strict == and is immune. Harden only if prod LLM
+        # is observed violating this.
+        sys_msg = _build_system_message(context_text, extra_system, with_sentinel=True)
+        formatted = [sys_msg] + list(history) + [HumanMessage(content=question)]
+        buffer = []
+        emitted = False
+        full_answer = []
+        async for chunk in llm.astream(formatted):
+            token = chunk.content if hasattr(chunk, "content") else str(chunk)
+            if not token:
+                continue
+            if emitted:
+                full_answer.append(token)
+                yield token, "token"
+                continue
+            buffer.append(token)
+            joined = "".join(buffer).strip()
+            if NO_ANSWER_SENTINEL.startswith(joined):
+                continue  # masih mungkin sentinel; tahan
+            # menyimpang -> jawaban nyata; flush buffer sekaligus
+            emitted = True
+            flushed = "".join(buffer)
+            full_answer.append(flushed)
+            yield flushed, "token"
 
-    # Yield sources as JSON-serializable list of SourceItem dicts
-    sources = [item.model_dump() for item in build_source_items(context_docs)]
+        joined_final = "".join(buffer).strip()
+        if not emitted and joined_final == NO_ANSWER_SENTINEL:
+            results = await asyncio.to_thread(search_web, question)
+            if results:
+                web_ctx = web_context_text(results)
+                web_sys = _build_system_message(
+                    web_ctx, extra_system, with_sentinel=False
+                )
+                web_formatted = (
+                    [web_sys] + list(history) + [HumanMessage(content=question)]
+                )
+                full_answer = []
+                async for chunk in llm.astream(web_formatted):
+                    token = chunk.content if hasattr(chunk, "content") else str(chunk)
+                    if token:
+                        full_answer.append(token)
+                        yield token, "token"
+                answer = "".join(full_answer)
+                sources_docs = web_results_to_documents(results)
+                web_used = True
+                token_est_context = web_ctx
+            else:
+                answer = NOT_FOUND_MSG
+                sources_docs = []
+                yield answer, "token"
+                token_est_context = ""
+        elif not emitted:
+            # buffer tertahan tapi bukan sentinel penuh (jawaban pendek) -> flush
+            answer = "".join(buffer)
+            if answer:
+                yield answer, "token"
+        else:
+            answer = "".join(full_answer)
+
+    # Event status web (sebelum sources).
+    yield {"used": web_used}, "web_search"
+
+    # Sources (web atau RAG).
+    sources = [item.model_dump() for item in build_source_items(sources_docs)]
     yield sources, "sources"
 
-    # Yield token usage
+    # Token usage (estimasi; pakai konteks yang benar-benar dikonsumsi LLM).
     history_text = " ".join(msg.content for msg in history) if history else ""
     t_input = (
         estimate_tokens(SYSTEM_PROMPT_TEMPLATE)
-        + estimate_tokens(context_text)
+        + estimate_tokens(token_est_context)
         + estimate_tokens(history_text)
         + estimate_tokens(question)
     )
@@ -286,7 +425,7 @@ async def stream_chat_response(
         "elapsed_ms": elapsed_ms,
     }, "token_usage"
 
-    # Update history
+    # Update history.
     history.extend([HumanMessage(content=question), AIMessage(content=answer)])
     if len(history) > config.MEMORY_WINDOW_SIZE * 2:
         history[:] = history[-config.MEMORY_WINDOW_SIZE * 2 :]

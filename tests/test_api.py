@@ -340,6 +340,58 @@ def test_upload_file_only_stores_file_without_auto_ingest(monkeypatch, tmp_path)
     assert files[0].name.endswith("_sample.pdf")
 
 
+def test_chat_uses_web_fallback_when_enabled(monkeypatch):
+    api = _load_api()
+    client = TestClient(api.app)
+    monkeypatch.setattr(api.config, "WEB_SEARCH_ENABLED", True)
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
+    monkeypatch.setattr(
+        api,
+        "answer_with_web_fallback",
+        lambda q, h, vs, extra: ("Jawaban web", [], True, []),
+    )
+
+    resp = client.post(
+        "/api/v1/chat",
+        headers=_auth_header(),
+        json={"question": "apa itu X?", "enable_web_search": True},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["answer"] == "Jawaban web"
+    assert body["web_search_used"] is True
+
+
+def test_chat_ignores_web_when_global_disabled(monkeypatch):
+    api = _load_api()
+    client = TestClient(api.app)
+    monkeypatch.setattr(api.config, "WEB_SEARCH_ENABLED", False)
+
+    class _FakeChain:
+        def invoke(self, _payload):
+            return {"answer": "Jawaban RAG", "context": []}
+
+    monkeypatch.setattr(api, "_get_or_create_chain", lambda: _FakeChain())
+
+    sentinel = {"web": False}
+    monkeypatch.setattr(
+        api,
+        "answer_with_web_fallback",
+        lambda *a, **k: sentinel.__setitem__("web", True) or ("x", [], True, []),
+    )
+
+    resp = client.post(
+        "/api/v1/chat",
+        headers=_auth_header(),
+        json={"question": "apa itu X?", "enable_web_search": True},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["answer"] == "Jawaban RAG"
+    assert body["web_search_used"] is False
+    assert sentinel["web"] is False  # helper web TIDAK dipanggil
+
+
 def test_ingest_status_endpoint(monkeypatch):
     api = _load_api()
     client = TestClient(api.app)

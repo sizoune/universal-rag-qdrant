@@ -9,6 +9,10 @@ class ChatRequest(BaseModel):
         max_length=8000,
         description="Extra system instructions appended to the base prompt for this request",
     )
+    enable_web_search: bool = Field(
+        default=False,
+        description="Aktifkan fallback web search bila jawaban tak ada di dokumen",
+    )
 
 
 class IngestWebRequest(BaseModel):
@@ -67,6 +71,7 @@ class ChatResponse(BaseModel):
     sources: list[SourceItem]
     token_usage: TokenUsage
     elapsed_ms: int | None = None
+    web_search_used: bool = False
 
 
 class FileItem(BaseModel):
