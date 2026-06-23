@@ -294,48 +294,108 @@ def answer_with_web_fallback(
 
 
 async def stream_chat_response(
-    question: str, session_id: str, vector_store, history: list, extra_system: str = ""
+    question: str,
+    session_id: str,
+    vector_store,
+    history: list,
+    extra_system: str = "",
+    enable_web_search: bool = False,
 ):
-    """Async generator for SSE streaming chat. Two-phase: sync retrieval + async LLM streaming."""
+    """Async generator untuk SSE streaming. Dua fase: retrieval sync + LLM stream.
+    enable_web_search=True menambah deteksi sentinel + fallback web."""
+    import asyncio
+
     start = time.perf_counter()
     llm = get_llm()
     retriever = build_history_aware_retriever(vector_store, llm)
 
-    # Phase A: Sync history-aware retrieval (condense vs history, then search).
-    # Empty history -> input passes straight through (fresh-session behaviour).
+    # Phase A: retrieval history-aware (kosong -> input lewat apa adanya).
     context_docs = retriever.invoke({"input": question, "chat_history": history})
-
-    context_text = "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
-
-    from langchain_core.messages import SystemMessage
-
-    # ONE system message only — my-combo ignores the context when given multiple
-    # system messages (see get_chat_chain). Fold extra + date guidance into it.
-    parts = [SYSTEM_PROMPT_TEMPLATE.format(context=context_text)]
-    if extra_system:
-        parts.append(extra_system)
-    parts.append(_date_guidance())
-    formatted = (
-        [SystemMessage(content="\n\n".join(parts))]
-        + list(history)
-        + [HumanMessage(content=question)]
+    context_text = (
+        "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
     )
 
-    # Phase B: Async LLM streaming
-    full_answer = []
-    async for chunk in llm.astream(formatted):
-        token = chunk.content if hasattr(chunk, "content") else str(chunk)
-        if token:
-            full_answer.append(token)
-            yield token, "token"
+    web_used = False
+    sources_docs = context_docs
 
-    answer = "".join(full_answer)
+    if not enable_web_search:
+        # Jalur lama — tidak berubah.
+        sys_msg = _build_system_message(context_text, extra_system, with_sentinel=False)
+        formatted = [sys_msg] + list(history) + [HumanMessage(content=question)]
+        full_answer = []
+        async for chunk in llm.astream(formatted):
+            token = chunk.content if hasattr(chunk, "content") else str(chunk)
+            if token:
+                full_answer.append(token)
+                yield token, "token"
+        answer = "".join(full_answer)
+    else:
+        # Jalur web-fallback: stream call #1 dengan supresi sentinel berbuffer.
+        # ponytail: buffer ditahan selama akumulasi masih prefiks "NO_ANSWER";
+        # begitu menyimpang -> flush. Bisa menunda <=1 token di kasus jawaban
+        # yang kebetulan diawali "N". Trade-off untuk mencegah sentinel bocor.
+        sys_msg = _build_system_message(context_text, extra_system, with_sentinel=True)
+        formatted = [sys_msg] + list(history) + [HumanMessage(content=question)]
+        buffer = []
+        emitted = False
+        full_answer = []
+        async for chunk in llm.astream(formatted):
+            token = chunk.content if hasattr(chunk, "content") else str(chunk)
+            if not token:
+                continue
+            if emitted:
+                full_answer.append(token)
+                yield token, "token"
+                continue
+            buffer.append(token)
+            joined = "".join(buffer).strip()
+            if NO_ANSWER_SENTINEL.startswith(joined):
+                continue  # masih mungkin sentinel; tahan
+            # menyimpang -> jawaban nyata; flush buffer sekaligus
+            emitted = True
+            flushed = "".join(buffer)
+            full_answer.append(flushed)
+            yield flushed, "token"
 
-    # Yield sources as JSON-serializable list of SourceItem dicts
-    sources = [item.model_dump() for item in build_source_items(context_docs)]
+        joined_final = "".join(buffer).strip()
+        if not emitted and joined_final == NO_ANSWER_SENTINEL:
+            results = await asyncio.to_thread(search_web, question)
+            if results:
+                web_sys = _build_system_message(
+                    web_context_text(results), extra_system, with_sentinel=False
+                )
+                web_formatted = (
+                    [web_sys] + list(history) + [HumanMessage(content=question)]
+                )
+                full_answer = []
+                async for chunk in llm.astream(web_formatted):
+                    token = chunk.content if hasattr(chunk, "content") else str(chunk)
+                    if token:
+                        full_answer.append(token)
+                        yield token, "token"
+                answer = "".join(full_answer)
+                sources_docs = web_results_to_documents(results)
+                web_used = True
+            else:
+                answer = NOT_FOUND_MSG
+                sources_docs = []
+                yield answer, "token"
+        elif not emitted:
+            # buffer tertahan tapi bukan sentinel penuh (jawaban pendek) -> flush
+            answer = "".join(buffer)
+            if answer:
+                yield answer, "token"
+        else:
+            answer = "".join(full_answer)
+
+    # Event status web (sebelum sources).
+    yield {"used": web_used}, "web_search"
+
+    # Sources (web atau RAG).
+    sources = [item.model_dump() for item in build_source_items(sources_docs)]
     yield sources, "sources"
 
-    # Yield token usage
+    # Token usage (estimasi).
     history_text = " ".join(msg.content for msg in history) if history else ""
     t_input = (
         estimate_tokens(SYSTEM_PROMPT_TEMPLATE)
@@ -352,7 +412,7 @@ async def stream_chat_response(
         "elapsed_ms": elapsed_ms,
     }, "token_usage"
 
-    # Update history
+    # Update history.
     history.extend([HumanMessage(content=question), AIMessage(content=answer)])
     if len(history) > config.MEMORY_WINDOW_SIZE * 2:
         history[:] = history[-config.MEMORY_WINDOW_SIZE * 2 :]
