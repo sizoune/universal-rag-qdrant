@@ -194,6 +194,25 @@ def build_history_aware_retriever(vector_store, llm):
     )
 
 
+def build_qa_prompt():
+    """Build the QA ChatPromptTemplate as a SINGLE system message.
+
+    IMPORTANT: keep everything in ONE system message. Some OpenAI-compatible
+    backends (prod LLM "my-combo") only honour the FIRST system message — any
+    extra system message (even an empty {extra_system}) makes the model ignore
+    the retrieved context and hallucinate. So fold the optional per-request
+    {extra_system} and {date_guidance} into the single context system message.
+    ({context} is filled by create_stuff_documents_chain.)
+    """
+    return ChatPromptTemplate.from_messages(
+        [
+            ("system", SYSTEM_PROMPT_TEMPLATE + "\n\n{extra_system}\n\n{date_guidance}"),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+        ]
+    ).partial(date_guidance=_date_guidance)  # callable -> re-evaluated each invoke
+
+
 def get_chat_chain(vector_store):
     """Sets up the retrieval + LLM conversational chain.
     Supports dense (default) and hybrid (dense+sparse) search modes,
@@ -202,19 +221,7 @@ def get_chat_chain(vector_store):
     llm = get_llm()
     retriever = build_history_aware_retriever(vector_store, llm)
 
-    # {extra_system} carries optional per-request client instructions; the caller
-    # always passes it (empty string when unused), so the template never errors.
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", SYSTEM_PROMPT_TEMPLATE),
-            ("system", "{extra_system}"),
-            ("system", "{date_guidance}"),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-        ]
-    ).partial(date_guidance=_date_guidance)  # callable -> re-evaluated each invoke
-
-    question_answer_chain = create_stuff_documents_chain(llm, prompt)
+    question_answer_chain = create_stuff_documents_chain(llm, build_qa_prompt())
     rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 
     return rag_chain
@@ -233,15 +240,20 @@ async def stream_chat_response(
     context_docs = retriever.invoke({"input": question, "chat_history": history})
 
     context_text = "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
-    system_prompt = SYSTEM_PROMPT_TEMPLATE.format(context=context_text)
 
     from langchain_core.messages import SystemMessage
 
-    messages = [SystemMessage(content=system_prompt)]
+    # ONE system message only — my-combo ignores the context when given multiple
+    # system messages (see get_chat_chain). Fold extra + date guidance into it.
+    parts = [SYSTEM_PROMPT_TEMPLATE.format(context=context_text)]
     if extra_system:
-        messages.append(SystemMessage(content=extra_system))
-    messages.append(SystemMessage(content=_date_guidance()))
-    formatted = messages + list(history) + [HumanMessage(content=question)]
+        parts.append(extra_system)
+    parts.append(_date_guidance())
+    formatted = (
+        [SystemMessage(content="\n\n".join(parts))]
+        + list(history)
+        + [HumanMessage(content=question)]
+    )
 
     # Phase B: Async LLM streaming
     full_answer = []
