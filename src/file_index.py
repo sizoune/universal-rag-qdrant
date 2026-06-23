@@ -58,7 +58,7 @@ def list_indexed_sources(vector_store) -> list[dict]:
             collection_name=config.QDRANT_COLLECTION_NAME,
             limit=256,
             offset=offset,
-            with_payload=True,
+            with_payload=["metadata"],  # buang page_content (teks chunk); cuma butuh metadata
             with_vectors=False,
         )
         if not records:
@@ -89,7 +89,7 @@ def get_source_detail(vector_store, source: str) -> dict | None:
             ),
             limit=256,
             offset=offset,
-            with_payload=True,
+            with_payload=["metadata"],  # buang page_content (teks chunk); cuma butuh metadata
             with_vectors=False,
         )
         if not records:
