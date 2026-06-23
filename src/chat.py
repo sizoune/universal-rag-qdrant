@@ -11,10 +11,26 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from src.citation import build_source_items
 from src.config import config
+from datetime import date
 import logging
 import time
 
 logger = logging.getLogger(__name__)
+
+
+def _date_guidance() -> str:
+    """Year-preference instruction, evaluated per-invoke so cached chains stay current.
+
+    When the user asks without naming a year, prefer the running year; fall back to
+    the closest year present in the context (a ranking pure vector search can't do).
+    """
+    today = date.today()
+    return (
+        f"Tanggal hari ini: {today.isoformat()}. "
+        f"Jika pertanyaan pengguna tidak menyebutkan tahun secara eksplisit, "
+        f"utamakan data dari tahun berjalan ({today.year}); jika tahun itu tidak ada "
+        f"di konteks, gunakan data dari tahun yang paling dekat dengan {today.year}."
+    )
 
 # Basic In-Memory Chat History
 chat_history = []
@@ -192,10 +208,11 @@ def get_chat_chain(vector_store):
         [
             ("system", SYSTEM_PROMPT_TEMPLATE),
             ("system", "{extra_system}"),
+            ("system", "{date_guidance}"),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{input}"),
         ]
-    )
+    ).partial(date_guidance=_date_guidance)  # callable -> re-evaluated each invoke
 
     question_answer_chain = create_stuff_documents_chain(llm, prompt)
     rag_chain = create_retrieval_chain(retriever, question_answer_chain)
@@ -223,6 +240,7 @@ async def stream_chat_response(
     messages = [SystemMessage(content=system_prompt)]
     if extra_system:
         messages.append(SystemMessage(content=extra_system))
+    messages.append(SystemMessage(content=_date_guidance()))
     formatted = messages + list(history) + [HumanMessage(content=question)]
 
     # Phase B: Async LLM streaming
