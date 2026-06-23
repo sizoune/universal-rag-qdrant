@@ -101,5 +101,4 @@ class Config:
         WEB_SEARCH_MAX_RESULTS = 5
         WEB_SEARCH_TIMEOUT = 10
 
-
 config = Config()

@@ -337,6 +337,7 @@ def test_upload_file_only_stores_file_without_auto_ingest(monkeypatch, tmp_path)
     assert body["added_chunks"] is None
     files = list(uploads_dir.iterdir())
     assert len(files) == 1
+    assert files[0].name.endswith("_sample.pdf")
 
 
 def test_chat_uses_web_fallback_when_enabled(monkeypatch):

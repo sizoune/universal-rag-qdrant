@@ -1,6 +1,3 @@
-import importlib
-from types import SimpleNamespace
-
 import pytest
 
 import src.web_search as web_search

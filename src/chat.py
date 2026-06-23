@@ -4,7 +4,7 @@ from langchain_classic.chains import (
 )
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.retrievers import BaseRetriever
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -13,6 +13,7 @@ from src.citation import build_source_items
 from src.config import config
 from src.web_search import search_web, web_context_text, web_results_to_documents
 from datetime import date
+import asyncio
 import logging
 import time
 
@@ -249,8 +250,6 @@ def get_chat_chain(vector_store):
 def _build_system_message(context_text: str, extra_system: str, with_sentinel: bool):
     """Bangun SATU SystemMessage (lihat build_qa_prompt: my-combo hanya menghormati
     system message pertama). with_sentinel=True memakai template sentinel."""
-    from langchain_core.messages import SystemMessage
-
     template = SENTINEL_SYSTEM_TEMPLATE if with_sentinel else SYSTEM_PROMPT_TEMPLATE
     parts = [template.format(context=context_text)]
     if extra_system:
@@ -303,8 +302,6 @@ async def stream_chat_response(
 ):
     """Async generator untuk SSE streaming. Dua fase: retrieval sync + LLM stream.
     enable_web_search=True menambah deteksi sentinel + fallback web."""
-    import asyncio
-
     start = time.perf_counter()
     llm = get_llm()
     retriever = build_history_aware_retriever(vector_store, llm)
