@@ -104,7 +104,10 @@ class HybridRetriever(BaseRetriever):
                 doc.metadata["score"] = point.score
                 documents.append(doc)
 
-            # Filter by score threshold
+            # Filter by score threshold. NOTE: after RRF fusion, point.score is the
+            # fused reciprocal-rank score (~1/rank, far below any cosine-style
+            # threshold), so this filter is effectively always empty in hybrid mode
+            # and we keep the full fused pool. The reranker below is what selects top-k.
             filtered_documents = [
                 d
                 for d in documents
@@ -112,14 +115,19 @@ class HybridRetriever(BaseRetriever):
             ]
             if filtered_documents:
                 documents = filtered_documents
-            else:
+            elif not (is_reranker_enabled() and documents):
+                # ponytail: only collapse to top-k when nothing will rerank the pool.
+                # Truncating here BEFORE the reranker was the bug: it dropped answer
+                # chunks that RRF ranked past position k (e.g. pos 13/20) even though
+                # the reranker ranks them #1 once it sees them. Keep the full fused
+                # pool so the reranker gets a chance at every candidate.
                 logger.info(
                     "No hybrid docs passed score_threshold=%.3f. Using top-k fallback.",
                     self.score_threshold,
                 )
                 documents = documents[: self.k]
 
-            # Re-rank if enabled
+            # Re-rank if enabled (reranks the FULL fused pool, returns top-k)
             if is_reranker_enabled() and documents:
                 documents = rerank(query, documents, top_k=self.k)
             else:
