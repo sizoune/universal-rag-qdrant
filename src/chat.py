@@ -11,6 +11,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from src.citation import build_source_items
 from src.config import config
+from src.web_search import search_web, web_context_text, web_results_to_documents
 from datetime import date
 import logging
 import time
@@ -49,6 +50,24 @@ SYSTEM_PROMPT_TEMPLATE = (
     "You are a helpful AI assistant connected to a knowledge base.\n"
     "Use the following pieces of retrieved context to answer the user's question.\n"
     "If the answer is not in the context, just say that you don't know based on the provided documents. "
+    "Do not make up information that isn't supported by the context.\n\n"
+    "Context:\n{context}"
+)
+
+NO_ANSWER_SENTINEL = "NO_ANSWER"
+
+NOT_FOUND_MSG = (
+    "Maaf, jawaban tidak ditemukan di dokumen maupun hasil pencarian web."
+)
+
+# Varian prompt untuk jalur web-fallback: ganti klausa "say you don't know"
+# dengan instruksi sentinel agar deteksi deterministik. Tetap SATU system message.
+SENTINEL_SYSTEM_TEMPLATE = (
+    "You are a helpful AI assistant connected to a knowledge base.\n"
+    "Use the following pieces of retrieved context to answer the user's question.\n"
+    f"If the answer is NOT in the context, reply with EXACTLY `{NO_ANSWER_SENTINEL}` "
+    "and nothing else (no other words, no punctuation, no explanation). "
+    "If the answer IS in the context, answer normally and never output that token.\n"
     "Do not make up information that isn't supported by the context.\n\n"
     "Context:\n{context}"
 )
@@ -225,6 +244,53 @@ def get_chat_chain(vector_store):
     rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 
     return rag_chain
+
+
+def _build_system_message(context_text: str, extra_system: str, with_sentinel: bool):
+    """Bangun SATU SystemMessage (lihat build_qa_prompt: my-combo hanya menghormati
+    system message pertama). with_sentinel=True memakai template sentinel."""
+    from langchain_core.messages import SystemMessage
+
+    template = SENTINEL_SYSTEM_TEMPLATE if with_sentinel else SYSTEM_PROMPT_TEMPLATE
+    parts = [template.format(context=context_text)]
+    if extra_system:
+        parts.append(extra_system)
+    parts.append(_date_guidance())
+    return SystemMessage(content="\n\n".join(parts))
+
+
+def answer_with_web_fallback(
+    question: str, history: list, vector_store, extra_system: str = ""
+) -> tuple[str, list, bool]:
+    """Jawab dari RAG; jika model tak bisa menjawab dari konteks (sentinel),
+    fallback ke web search lalu jawab ulang. Return (answer, sources, web_used).
+    Caller wajib menggerbang ini pada web aktif (request + global enabled)."""
+    llm = get_llm()
+    retriever = build_history_aware_retriever(vector_store, llm)
+    context_docs = retriever.invoke({"input": question, "chat_history": history})
+    context_text = (
+        "\n".join(d.page_content for d in context_docs) if context_docs else ""
+    )
+
+    sys_msg = _build_system_message(context_text, extra_system, with_sentinel=True)
+    messages = [sys_msg] + list(history) + [HumanMessage(content=question)]
+    answer = (llm.invoke(messages).content or "").strip()
+
+    if answer != NO_ANSWER_SENTINEL:
+        return answer, build_source_items(context_docs), False
+
+    # ponytail: query web pakai pertanyaan mentah; follow-up anaforik bisa
+    # kurang presisi. Upgrade = condense pakai history (panggilan LLM ke-3).
+    results = search_web(question)
+    if not results:
+        return NOT_FOUND_MSG, [], False
+
+    web_sys = _build_system_message(
+        web_context_text(results), extra_system, with_sentinel=False
+    )
+    web_messages = [web_sys] + list(history) + [HumanMessage(content=question)]
+    web_answer = (llm.invoke(web_messages).content or "").strip()
+    return web_answer, build_source_items(web_results_to_documents(results)), True
 
 
 async def stream_chat_response(
