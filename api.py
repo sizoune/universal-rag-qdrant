@@ -366,13 +366,12 @@ def chat_endpoint(payload: ChatRequest):
     start = time.perf_counter()
     if web_active:
         with _request_duration.labels(endpoint="/chat").time():
-            answer, sources, web_used = answer_with_web_fallback(
+            answer, sources, web_used, context_docs = answer_with_web_fallback(
                 payload.question,
                 history,
                 _get_or_create_vector_store(),
                 (payload.system_prompt or "").strip(),
             )
-        context_docs = []
     else:
         chain = _get_or_create_chain()
         with _request_duration.labels(endpoint="/chat").time():

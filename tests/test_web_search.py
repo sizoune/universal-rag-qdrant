@@ -66,3 +66,9 @@ def test_web_results_to_documents_metadata():
     assert docs[0].metadata["source_type"] == "web"
     assert docs[0].metadata["source"] == "https://a.test"
     assert docs[0].page_content == "s"
+
+
+def test_search_web_empty_url_returns_empty(monkeypatch):
+    monkeypatch.setattr(web_search.config, "WEB_SEARCH_URL", "")
+    monkeypatch.setattr(web_search.config, "LLM_BASE_URL", "")
+    assert web_search.search_web("x") == []

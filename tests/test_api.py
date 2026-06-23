@@ -348,7 +348,7 @@ def test_chat_uses_web_fallback_when_enabled(monkeypatch):
     monkeypatch.setattr(
         api,
         "answer_with_web_fallback",
-        lambda q, h, vs, extra: ("Jawaban web", [], True),
+        lambda q, h, vs, extra: ("Jawaban web", [], True, []),
     )
 
     resp = client.post(
@@ -377,7 +377,7 @@ def test_chat_ignores_web_when_global_disabled(monkeypatch):
     monkeypatch.setattr(
         api,
         "answer_with_web_fallback",
-        lambda *a, **k: sentinel.__setitem__("web", True) or ("x", [], True),
+        lambda *a, **k: sentinel.__setitem__("web", True) or ("x", [], True, []),
     )
 
     resp = client.post(
