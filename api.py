@@ -41,7 +41,13 @@ from src.api_models import (
     UploadFileItem,
     UploadFileListResponse,
 )
-from src.chat import SYSTEM_PROMPT_TEMPLATE, estimate_tokens, get_chat_chain, stream_chat_response
+from src.chat import (
+    SYSTEM_PROMPT_TEMPLATE,
+    answer_with_web_fallback,
+    estimate_tokens,
+    get_chat_chain,
+    stream_chat_response,
+)
 from src.citation import build_source_items
 from src.config import config
 from src.file_index import (
@@ -355,21 +361,34 @@ def chat_endpoint(payload: ChatRequest):
     _chat_requests.labels(type="sync").inc()
     session_id = (payload.session_id or "default").strip() or "default"
     history = _session_histories.setdefault(session_id, [])
-    chain = _get_or_create_chain()
+    web_active = bool(payload.enable_web_search and config.WEB_SEARCH_ENABLED)
 
     start = time.perf_counter()
-    with _request_duration.labels(endpoint="/chat").time():
-        response = chain.invoke(
-            {
-                "input": payload.question,
-                "chat_history": history,
-                "extra_system": (payload.system_prompt or "").strip(),
-            }
-        )
+    if web_active:
+        with _request_duration.labels(endpoint="/chat").time():
+            answer, sources, web_used = answer_with_web_fallback(
+                payload.question,
+                history,
+                _get_or_create_vector_store(),
+                (payload.system_prompt or "").strip(),
+            )
+        context_docs = []
+    else:
+        chain = _get_or_create_chain()
+        with _request_duration.labels(endpoint="/chat").time():
+            response = chain.invoke(
+                {
+                    "input": payload.question,
+                    "chat_history": history,
+                    "extra_system": (payload.system_prompt or "").strip(),
+                }
+            )
+        answer = response.get("answer", "No answer generated.")
+        context_docs = response.get("context", [])
+        sources = build_source_items(context_docs)
+        web_used = False
+
     elapsed_ms = int((time.perf_counter() - start) * 1000)
-    answer = response.get("answer", "No answer generated.")
-    context_docs = response.get("context", [])
-    sources = build_source_items(context_docs)
     token_usage = _calculate_token_usage(context_docs, history, payload.question, answer)
 
     history.extend([HumanMessage(content=payload.question), AIMessage(content=answer)])
@@ -377,7 +396,11 @@ def chat_endpoint(payload: ChatRequest):
         _session_histories[session_id] = history[-config.MEMORY_WINDOW_SIZE * 2 :]
 
     return ChatResponse(
-        answer=answer, sources=sources, token_usage=token_usage, elapsed_ms=elapsed_ms
+        answer=answer,
+        sources=sources,
+        token_usage=token_usage,
+        elapsed_ms=elapsed_ms,
+        web_search_used=web_used,
     )
 
 
@@ -390,14 +413,18 @@ async def chat_stream_endpoint(payload: ChatRequest):
     session_id = (payload.session_id or "default").strip() or "default"
     history = _session_histories.setdefault(session_id, [])
     vector_store = _get_or_create_vector_store()
+    web_active = bool(payload.enable_web_search and config.WEB_SEARCH_ENABLED)
 
     async def event_generator():
         async for data, event_type in stream_chat_response(
             payload.question, session_id, vector_store, history,
             (payload.system_prompt or "").strip(),
+            web_active,
         ):
             if event_type == "token":
                 yield f"data: {json.dumps({'type': 'token', 'content': data})}\n\n"
+            elif event_type == "web_search":
+                yield f"data: {json.dumps({'type': 'web_search', 'used': data['used']})}\n\n"
             elif event_type == "sources":
                 yield f"data: {json.dumps({'type': 'sources', 'sources': data})}\n\n"
             elif event_type == "token_usage":
