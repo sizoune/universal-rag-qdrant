@@ -16,6 +16,7 @@ Universal RAG adalah sistem Retrieval-Augmented Generation berbasis Qdrant + Lan
 - Smart ingestion untuk web/file + dedup berbasis hash
 - Hybrid search mode (dense + sparse) dengan fallback aman
 - Optional cross-encoder reranking
+- Web search fallback via 9Router (opt-in per request) saat RAG tak menemukan jawaban
 - Telegram bot gateway
 - FastAPI HTTP API + CRUD dokumen terindeks
 - Docker deployment (Qdrant + bot)
@@ -96,6 +97,14 @@ API_BEARER_TOKEN="change-me"
 API_HOST="0.0.0.0"
 API_PORT=8000
 API_CORS_ORIGINS="*"
+
+# Web Search Fallback (9Router) — lihat seksi khusus di bawah
+WEB_SEARCH_ENABLED=false          # kill-switch global; tetap perlu enable_web_search=true per request
+WEB_SEARCH_URL=""                 # kosong -> derive LLM_BASE_URL + "/search"
+WEB_SEARCH_API_KEY=""             # kosong -> fallback ke LLM_API_KEY
+WEB_SEARCH_PROVIDER="search-combo"
+WEB_SEARCH_MAX_RESULTS=5
+WEB_SEARCH_TIMEOUT=10
 ```
 
 ### 3. Jalankan perintah
@@ -144,6 +153,7 @@ Endpoint utama:
 - `GET /health` (tanpa auth)
 - `GET /api/v1/status`
 - `POST /api/v1/chat`
+- `POST /api/v1/chat/stream` (SSE streaming)
 - `POST /api/v1/ingest/web`
 - `POST /api/v1/ingest/file-path`
 - `POST /api/v1/ingest/uploads`
@@ -173,6 +183,60 @@ curl -X POST "http://localhost:8000/api/v1/chat" \
   -H "Content-Type: application/json" \
   -d '{"question":"apa itu SaaS?","system_prompt":"Jawab singkat dalam 1 kalimat."}'
 ```
+
+## Web Search Fallback (9Router)
+
+Saat RAG tidak menemukan jawaban di dokumen terindeks, sistem dapat fallback ke
+**web search lewat 9Router** (`POST /v1/search`) lalu menjawab ulang dari hasil
+web. Fitur ini **opt-in per request** dan punya **kill-switch global**.
+
+**Cara kerja.** LLM mencoba menjawab dari konteks RAG terlebih dulu. Bila model
+menilai jawaban tidak ada di konteks (mengeluarkan sentinel `NO_ANSWER`), barulah
+web search dipanggil dan LLM menjawab ulang dari hasil web. Jadi biaya LLM hanya
+menjadi 2x saat fallback benar-benar terpicu — bila RAG sudah bisa menjawab, tetap
+1x panggilan. Hasil web muncul sebagai sumber `source_type="web"` lewat pipeline
+sitasi yang sama. Pada streaming, sentinel ditahan (buffered) agar tidak bocor ke
+klien.
+
+**Aktivasi.** Butuh dua hal:
+1. Global: `WEB_SEARCH_ENABLED=true` (default `false`).
+2. Per request: kirim `"enable_web_search": true`. Jika global `false`, flag
+   request diabaikan diam-diam (`web_search_used=false`).
+
+Respons `POST /api/v1/chat` menambah field `web_search_used: bool`. Pada
+`POST /api/v1/chat/stream` ada event SSE `{"type":"web_search","used":<bool>}`
+sebelum event `sources`.
+
+**Konfigurasi (env).**
+
+| Env | Default | Fungsi |
+|---|---|---|
+| `WEB_SEARCH_ENABLED` | `false` | kill-switch global admin |
+| `WEB_SEARCH_URL` | *(derive `LLM_BASE_URL + "/search"`)* | endpoint POST 9Router |
+| `WEB_SEARCH_API_KEY` | *(fallback `LLM_API_KEY`)* | Bearer token |
+| `WEB_SEARCH_PROVIDER` | `search-combo` | field `model`/`provider` (combo = multi-provider auto-fallback) |
+| `WEB_SEARCH_MAX_RESULTS` | `5` | jumlah hasil |
+| `WEB_SEARCH_TIMEOUT` | `10` | timeout detik |
+
+> **Catatan URL.** Karena LLM biasanya sudah lewat 9Router, `WEB_SEARCH_URL`
+> dibiarkan kosong dan diturunkan otomatis dari `LLM_BASE_URL + "/search"`. Ini
+> **hanya benar bila `LLM_BASE_URL` berakhiran `/v1`** (mis. `http://host:port/v1`
+> → `http://host:port/v1/search`). Bila berbeda, set `WEB_SEARCH_URL` eksplisit ke
+> URL `/v1/search` penuh. Pastikan juga `WEB_SEARCH_PROVIDER` benar-benar ada di
+> instance 9Router-mu: `curl $NINEROUTER_URL/v1/models/web`.
+
+Contoh request dengan fallback aktif:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/chat" \
+  -H "Authorization: Bearer change-me" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"siapa presiden Prancis saat ini?","enable_web_search":true}'
+# -> {"answer":"...","web_search_used":true, "sources":[{"source_type":"web",...}], ...}
+```
+
+> Fallback hanya terpicu saat RAG tidak punya jawaban. Untuk pertanyaan yang
+> jawabannya ada di dokumen, `web_search_used` tetap `false` meski toggle aktif.
 
 ## Advanced RAG (Ringkas)
 
