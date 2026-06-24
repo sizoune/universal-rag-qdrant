@@ -219,7 +219,16 @@ def ingest_documents(documents: list, vector_store) -> None:
         return
 
     import uuid
+    from datetime import datetime, timezone
+
     from src.config import config
+
+    # Stamp ingest time on every chunk that lacks it, so listing/sorting by
+    # recency works regardless of ingest path (API already sets it; CLI/dir
+    # ingests did not). setdefault keeps any value the caller already set.
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for doc in documents:
+        doc.metadata.setdefault("ingested_at", now_iso)
 
     client = vector_store.client
     collection_name = config.QDRANT_COLLECTION_NAME

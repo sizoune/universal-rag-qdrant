@@ -4,6 +4,7 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi import Query
@@ -595,10 +596,52 @@ def ingest_uploads():
             _set_ingest_status_finish(status_message)
 
 
+def _filter_sort_files(
+    items: list[dict],
+    *,
+    search: str | None,
+    source_type: str | None,
+    in_s3: bool | None,
+    sort_by: str,
+    sort_dir: str,
+) -> list[dict]:
+    """Filter + sort indexed-source dicts. Pure (no mutation); newest-first by default.
+
+    Each item must have: source, source_type, chunk_count, last_seen, in_s3.
+    `last_seen` may be None — it sorts to the bottom under the default desc order.
+    """
+    out = items
+    if search:
+        q = search.lower()
+        out = [it for it in out if q in (it.get("source") or "").lower()]
+    if source_type:
+        out = [it for it in out if it.get("source_type") == source_type]
+    if in_s3 is not None:
+        out = [it for it in out if bool(it.get("in_s3")) == in_s3]
+
+    def key(it: dict):
+        if sort_by == "chunk_count":
+            return it.get("chunk_count") or 0
+        if sort_by == "filename":
+            return os.path.basename(it.get("source") or "").lower()
+        if sort_by == "source_type":
+            return (it.get("source_type") or "").lower()
+        return it.get("last_seen") or ""  # last_seen: None -> "" sinks under desc
+
+    return sorted(out, key=key, reverse=(sort_dir == "desc"))
+
+
 @api_router.get("/files", response_model=FileListResponse)
 def list_files(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
+    search: str | None = Query(default=None, description="Substring match on source/filename"),
+    source_type: str | None = Query(default=None, description="Filter: e.g. 'local' or 'web'"),
+    in_s3: bool | None = Query(default=None, description="Filter by S3 presence"),
+    sort_by: Literal["last_seen", "chunk_count", "filename", "source_type"] = Query(
+        default="last_seen"
+    ),
+    sort_dir: Literal["asc", "desc"] = Query(default="desc"),
 ):
     all_sources = list_indexed_sources(_get_or_create_vector_store())
 
@@ -610,17 +653,24 @@ def list_files(
         except Exception:
             pass  # S3 unavailable — treat all as not in S3
 
-    items = []
-    for item in all_sources:
-        filename = os.path.basename(item["source"])
-        items.append(FileItem(**item, in_s3=filename in s3_keys))
+    enriched = [
+        {**item, "in_s3": os.path.basename(item["source"]) in s3_keys} for item in all_sources
+    ]
+    filtered = _filter_sort_files(
+        enriched,
+        search=search,
+        source_type=source_type,
+        in_s3=in_s3,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
 
-    total = len(items)
+    total = len(filtered)
     total_pages = max(1, (total + page_size - 1) // page_size)
     start = (page - 1) * page_size
     end = start + page_size
     return FileListResponse(
-        items=items[start:end],
+        items=[FileItem(**item) for item in filtered[start:end]],
         total=total,
         page=page,
         page_size=page_size,
