@@ -21,6 +21,7 @@ from src.cache_store import load_cache, save_cache, get_content_hash
 from src.code_parser import parse_code_file
 from src.config import config
 from src.layout_parser import chunk_elements, parse_docx, parse_pdf
+from src.pptx_parser import parse_pptx
 
 logger = logging.getLogger(__name__)
 
@@ -275,6 +276,22 @@ def load_local_document(filepath: str) -> list[Document]:
                 exc,
             )
             return _legacy_load_and_split(filepath)
+
+    if ext == ".pptx":
+        text = parse_pptx(filepath)
+        if not text.strip():
+            logger.warning("No text extracted from PPTX '%s'", filepath)
+            return []
+        doc = Document(
+            page_content=text,
+            metadata={"source": filepath, "source_type": "local"},
+        )
+        chunks = get_text_splitter().split_documents([doc])
+        file_hash = get_file_hash(filepath)
+        for d in chunks:
+            d.metadata["file_hash"] = file_hash
+            d.metadata.setdefault("parser_version", 1)
+        return chunks
 
     return _legacy_load_and_split(filepath)
 

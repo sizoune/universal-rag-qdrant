@@ -36,7 +36,9 @@ def is_file_allowed(filepath: str, max_size_mb: int = 1) -> bool:
         return False
 
     # 3. Accepted Extensions
-    accepted_exts = [".txt", ".pdf", ".csv", ".docx", ".md", ".py", ".js", ".html"]
+    accepted_exts = [
+        ".txt", ".pdf", ".csv", ".docx", ".pptx", ".md", ".py", ".js", ".html",
+    ]
     ext = os.path.splitext(filepath)[1].lower()
     if ext not in accepted_exts:
         return False

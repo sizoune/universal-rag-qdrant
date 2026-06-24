@@ -101,4 +101,17 @@ class Config:
         WEB_SEARCH_MAX_RESULTS = 5
         WEB_SEARCH_TIMEOUT = 10
 
+    # === OCR Gateway (optional, ocr-gateway / PaddleOCR) ===
+    # Kosong -> OCR mati; .pptx/PDF tetap pakai teks native saja.
+    OCR_GATEWAY_URL = os.getenv("OCR_GATEWAY_URL", "").rstrip("/")
+    OCR_API_KEY = os.getenv("OCR_API_KEY", "")
+    OCR_LANGUAGE = os.getenv("OCR_LANGUAGE", "id")
+    try:
+        OCR_TIMEOUT = int(os.getenv("OCR_TIMEOUT", "60"))
+        # Lewati gambar lebih kecil dari ini (ikon/logo/dekorasi).
+        OCR_MIN_IMAGE_BYTES = int(os.getenv("OCR_MIN_IMAGE_BYTES", "3072"))
+    except ValueError:
+        OCR_TIMEOUT = 60
+        OCR_MIN_IMAGE_BYTES = 3072
+
 config = Config()
