@@ -93,7 +93,16 @@ class Config:
     WEB_SEARCH_URL = os.getenv("WEB_SEARCH_URL", "")
     # Bearer untuk search. Kosong -> fallback ke LLM_API_KEY.
     WEB_SEARCH_API_KEY = os.getenv("WEB_SEARCH_API_KEY", "")
-    WEB_SEARCH_PROVIDER = os.getenv("WEB_SEARCH_PROVIDER", "search-combo")
+    # exa (neural search) paling jitu menemukan sumber RELEVAN & TERKINI; snippet-nya
+    # kosong tapi ditutup oleh WEB_SEARCH_FETCH_CONTENT. tavily mengisi snippet sendiri
+    # tapi kerap menarik artikel usang; search-combo balas snippet kosong tanpa fetch.
+    # Lihat /v1/models/web untuk daftar provider. exa WAJIB fetch=true di bawah.
+    WEB_SEARCH_PROVIDER = os.getenv("WEB_SEARCH_PROVIDER", "exa")
+    # Ambil isi halaman penuh top-N (via /v1/web/fetch) agar konteks bertanggal &
+    # LLM tak mengutip snippet usang. WAJIB true untuk provider exa (snippet kosong).
+    WEB_SEARCH_FETCH_CONTENT = os.getenv(
+        "WEB_SEARCH_FETCH_CONTENT", "true"
+    ).strip().lower() in ("1", "true", "yes", "on")
     try:
         WEB_SEARCH_MAX_RESULTS = int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5"))
         WEB_SEARCH_TIMEOUT = int(os.getenv("WEB_SEARCH_TIMEOUT", "10"))

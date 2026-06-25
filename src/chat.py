@@ -73,6 +73,17 @@ SENTINEL_SYSTEM_TEMPLATE = (
     "Context:\n{context}"
 )
 
+# Panduan recency KHUSUS jalur web-fallback (tidak dipakai jalur RAG dokumen).
+# Hasil web kerap mencampur artikel lama & baru; tanpa ini LLM mengutip yang usang.
+WEB_RECENCY_GUIDANCE = (
+    "Konteks di atas berasal dari pencarian web dan bisa memuat sumber usang. "
+    "Utamakan sumber RESMI (mis. situs pemerintah) dan informasi PALING BARU. "
+    "Perhatikan tanggal yang tertera di dalam teks; bila beberapa sumber menyebut "
+    "nama berbeda untuk jabatan/posisi yang sama, pilih yang paling baru dan sebutkan "
+    "perkiraan periodenya. Jangan mengarang — nyatakan bila suatu informasi tidak ada "
+    "dalam konteks."
+)
+
 
 class DenseThresholdFallbackRetriever(BaseRetriever):
     """Dense retriever with score-threshold first, then similarity fallback."""
@@ -247,11 +258,16 @@ def get_chat_chain(vector_store):
     return rag_chain
 
 
-def _build_system_message(context_text: str, extra_system: str, with_sentinel: bool):
+def _build_system_message(
+    context_text: str, extra_system: str, with_sentinel: bool, web: bool = False
+):
     """Bangun SATU SystemMessage (lihat build_qa_prompt: my-combo hanya menghormati
-    system message pertama). with_sentinel=True memakai template sentinel."""
+    system message pertama). with_sentinel=True memakai template sentinel.
+    web=True menyisipkan panduan recency (HANYA jalur web-fallback call #2)."""
     template = SENTINEL_SYSTEM_TEMPLATE if with_sentinel else SYSTEM_PROMPT_TEMPLATE
     parts = [template.format(context=context_text)]
+    if web:
+        parts.append(WEB_RECENCY_GUIDANCE)
     if extra_system:
         parts.append(extra_system)
     parts.append(_date_guidance())
@@ -291,7 +307,7 @@ def answer_with_web_fallback(
 
     web_docs = web_results_to_documents(results)
     web_sys = _build_system_message(
-        web_context_text(results), extra_system, with_sentinel=False
+        web_context_text(results), extra_system, with_sentinel=False, web=True
     )
     web_messages = [web_sys] + list(history) + [HumanMessage(content=question)]
     web_answer = (llm.invoke(web_messages).content or "").strip()
@@ -373,7 +389,7 @@ async def stream_chat_response(
             if results:
                 web_ctx = web_context_text(results)
                 web_sys = _build_system_message(
-                    web_ctx, extra_system, with_sentinel=False
+                    web_ctx, extra_system, with_sentinel=False, web=True
                 )
                 web_formatted = (
                     [web_sys] + list(history) + [HumanMessage(content=question)]

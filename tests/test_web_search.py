@@ -72,3 +72,35 @@ def test_search_web_empty_url_returns_empty(monkeypatch):
     monkeypatch.setattr(web_search.config, "WEB_SEARCH_URL", "")
     monkeypatch.setattr(web_search.config, "LLM_BASE_URL", "")
     assert web_search.search_web("x") == []
+
+
+def test_enrich_drops_social_and_replaces_snippet_with_fulltext(monkeypatch):
+    # (c) sosmed dibuang; (a) snippet diganti isi halaman penuh.
+    payload = {
+        "results": [
+            {"title": "News", "url": "https://news.test/a", "snippet": "pendek"},
+            {"title": "IG", "url": "https://www.instagram.com/reel/x", "snippet": "boiler"},
+        ],
+        "errors": [],
+    }
+    monkeypatch.setattr(web_search.requests, "post", lambda *a, **k: _FakeResp(payload))
+    monkeypatch.setattr(web_search.config, "LLM_BASE_URL", "http://host:9/v1")
+    monkeypatch.setattr(web_search.config, "WEB_SEARCH_FETCH_CONTENT", True)
+    monkeypatch.setattr(web_search, "_fetch_page_content", lambda url: f"ISI PENUH {url}")
+    results = web_search.search_web("q")
+    urls = [r.url for r in results]
+    assert "https://www.instagram.com/reel/x" not in urls  # (c)
+    assert results[0].snippet == "ISI PENUH https://news.test/a"  # (a)
+
+
+def test_fetch_content_disabled_keeps_original_snippet(monkeypatch):
+    payload = {"results": [{"title": "N", "url": "https://news.test/a", "snippet": "asli"}]}
+    monkeypatch.setattr(web_search.requests, "post", lambda *a, **k: _FakeResp(payload))
+    monkeypatch.setattr(web_search.config, "LLM_BASE_URL", "http://host:9/v1")
+    monkeypatch.setattr(web_search.config, "WEB_SEARCH_FETCH_CONTENT", False)
+
+    def _should_not_run(url):
+        raise AssertionError("fetch dimatikan, jangan dipanggil")
+
+    monkeypatch.setattr(web_search, "_fetch_page_content", _should_not_run)
+    assert web_search.search_web("q")[0].snippet == "asli"

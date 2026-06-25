@@ -102,9 +102,10 @@ API_CORS_ORIGINS="*"
 WEB_SEARCH_ENABLED=false          # kill-switch global; tetap perlu enable_web_search=true per request
 WEB_SEARCH_URL=""                 # kosong -> derive LLM_BASE_URL + "/search"
 WEB_SEARCH_API_KEY=""             # kosong -> fallback ke LLM_API_KEY
-WEB_SEARCH_PROVIDER="search-combo"
+WEB_SEARCH_PROVIDER="exa"         # neural search, sumber terkini; butuh FETCH_CONTENT=true
 WEB_SEARCH_MAX_RESULTS=5
 WEB_SEARCH_TIMEOUT=10
+WEB_SEARCH_FETCH_CONTENT="true"   # fetch isi halaman penuh (wajib utk exa, snippet kosong)
 ```
 
 ### 3. Jalankan perintah
@@ -214,9 +215,10 @@ sebelum event `sources`.
 | `WEB_SEARCH_ENABLED` | `false` | kill-switch global admin |
 | `WEB_SEARCH_URL` | *(derive `LLM_BASE_URL + "/search"`)* | endpoint POST 9Router |
 | `WEB_SEARCH_API_KEY` | *(fallback `LLM_API_KEY`)* | Bearer token |
-| `WEB_SEARCH_PROVIDER` | `search-combo` | field `model`/`provider` (combo = multi-provider auto-fallback) |
+| `WEB_SEARCH_PROVIDER` | `exa` | field `model`/`provider`. **`exa`** (neural search) paling jitu menemukan sumber terkini → butuh `WEB_SEARCH_FETCH_CONTENT=true` (snippet exa kosong). `tavily` mengisi snippet sendiri tapi sering menarik artikel usang. **Hindari `search-combo`** |
 | `WEB_SEARCH_MAX_RESULTS` | `5` | jumlah hasil |
 | `WEB_SEARCH_TIMEOUT` | `10` | timeout detik |
+| `WEB_SEARCH_FETCH_CONTENT` | `true` | ambil isi halaman penuh top-3 (via `/v1/web/fetch`) → konteks bertanggal, LLM tak mengutip snippet usang. Wajib untuk `exa` |
 
 > **Catatan URL.** Karena LLM biasanya sudah lewat 9Router, `WEB_SEARCH_URL`
 > dibiarkan kosong dan diturunkan otomatis dari `LLM_BASE_URL + "/search"`. Ini
