@@ -81,6 +81,11 @@ class Config:
     SEARCH_MODE = os.getenv("SEARCH_MODE", "dense")  # "dense" or "hybrid"
     RERANKER_ENABLED = os.getenv("RERANKER_ENABLED", "false")
     RERANKER_MODEL = os.getenv("RERANKER_MODEL", "Xenova/ms-marco-MiniLM-L-6-v2")
+    try:
+        # Cross-encoder scores below this are treated as irrelevant (typical range ~ -10..+10).
+        RERANKER_MIN_SCORE = float(os.getenv("RERANKER_MIN_SCORE", "0.0"))
+    except ValueError:
+        RERANKER_MIN_SCORE = 0.0
 
     # === Web Search Fallback (9router /v1/search) ===
     WEB_SEARCH_ENABLED = os.getenv("WEB_SEARCH_ENABLED", "false").strip().lower() in (

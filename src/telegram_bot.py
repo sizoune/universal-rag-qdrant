@@ -26,8 +26,12 @@ from src.vector_store import (
     ingest_documents,
     initialize_vector_store,
 )
-from src.chat import get_chat_chain, estimate_tokens, SYSTEM_PROMPT_TEMPLATE
-from src.citation import build_source_items
+from src.chat import (
+    answer_with_web_fallback,
+    estimate_tokens,
+    SYSTEM_PROMPT_TEMPLATE,
+)
+
 from src.cache_store import load_cache, save_cache, get_content_hash
 from src.utils import get_file_hash
 
@@ -40,7 +44,6 @@ user_histories: dict[int, list] = {}
 
 # Will be set by start_bot()
 _vector_store = None
-_chain = None
 
 
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -180,7 +183,7 @@ async def cmd_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    global _vector_store, _chain
+    global _vector_store
 
     success = clear_database()
     if success:
@@ -188,7 +191,6 @@ async def cmd_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_cache({})
         try:
             _vector_store = initialize_vector_store()
-            _chain = get_chat_chain(_vector_store)
             await update.message.reply_text(
                 "🗑️ Database berhasil dihapus dan collection baru sudah dibuat ulang."
             )
@@ -294,17 +296,19 @@ async def handle_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         start = time.perf_counter()
-        response = _chain.invoke({"input": question, "chat_history": history})
+        answer, sources, _web_used, context_docs = answer_with_web_fallback(
+            question,
+            history,
+            _vector_store,
+            enable_web_search=False,
+        )
         elapsed = time.perf_counter() - start
-        answer = response.get("answer", "Tidak ada jawaban.")
 
         # Build reply
         reply_parts = [answer]
 
         # Structured sources (Indonesian display, deduplicated)
-        context_docs = response.get("context", [])
         if context_docs:
-            sources = build_source_items(context_docs)
             reply_parts.append("\n📚 Sumber:")
             for i, src in enumerate(sources, start=1):
                 label = src.filename or src.source
@@ -386,7 +390,7 @@ async def post_init(app: Application):
 
 def start_bot(vector_store):
     """Start the Telegram bot (polling mode)."""
-    global _vector_store, _chain
+    global _vector_store
 
     token = config.TELEGRAM_BOT_TOKEN
     if not token:
@@ -397,7 +401,6 @@ def start_bot(vector_store):
         return
 
     _vector_store = vector_store
-    _chain = get_chat_chain(vector_store)
 
     print("\n🤖 Starting Telegram Bot Gateway...")
     print("   Press Ctrl+C to stop\n")

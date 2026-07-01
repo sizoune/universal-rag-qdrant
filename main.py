@@ -229,20 +229,16 @@ def main():
     elif args.command == "chat":
         if args.question:
             # Single-shot mode: answer and exit
-            from src.chat import get_chat_chain, print_token_usage
+            from src.chat import answer_with_web_fallback, print_token_usage
 
-            chain = get_chat_chain(vector_store)
             print(f"\nYou: {args.question}\n")
             print("Thinking...")
             try:
-                response = chain.invoke({"input": args.question, "chat_history": []})
-                answer = response.get("answer", "No answer generated.")
+                answer, sources, _web_used, context_docs = answer_with_web_fallback(
+                    args.question, [], vector_store, enable_web_search=False
+                )
                 print(f"AI: {answer}")
-                context_docs = response.get("context", [])
                 if context_docs:
-                    from src.citation import build_source_items
-
-                    sources = build_source_items(context_docs)
                     print("\n📚 Sumber:")
                     for i, src in enumerate(sources, start=1):
                         label = src.filename or src.source

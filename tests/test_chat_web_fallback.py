@@ -58,7 +58,9 @@ def test_fallback_triggers_on_sentinel(monkeypatch):
     web_results = [WebResult("T", "https://x.test", "snip", 0.9)]
     monkeypatch.setattr(chat, "search_web", lambda q: web_results)
 
-    answer, sources, web_used, ctx = chat.answer_with_web_fallback("q", [], object(), "")
+    answer, sources, web_used, ctx = chat.answer_with_web_fallback(
+        "q", [], object(), "", enable_web_search=True
+    )
     assert answer == "Jawaban dari web."
     assert web_used is True
     assert sources and sources[0].source_type == "web"
@@ -74,8 +76,10 @@ def test_fallback_no_web_results_returns_not_found(monkeypatch):
     _patch_common(monkeypatch, llm, docs)
     monkeypatch.setattr(chat, "search_web", lambda q: [])
 
-    answer, sources, web_used, ctx = chat.answer_with_web_fallback("q", [], object(), "")
-    assert answer == chat.NOT_FOUND_MSG
+    answer, sources, web_used, ctx = chat.answer_with_web_fallback(
+        "q", [], object(), "", enable_web_search=True
+    )
+    assert answer == chat.NOT_FOUND_WEB_MSG
     assert web_used is False
     assert sources == []
     # ctx harus kosong ketika tidak ada hasil web

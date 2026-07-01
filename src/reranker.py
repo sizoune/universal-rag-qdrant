@@ -48,6 +48,42 @@ def warm_reranker() -> None:
         logger.warning("Reranker warm-up failed (continuing lazily): %s", e)
 
 
+def _score_documents(query: str, documents: list) -> list[tuple[object, float]]:
+    """Return (document, score) pairs sorted by relevance descending."""
+    if not documents:
+        return []
+
+    reranker = get_reranker()
+    texts = [doc.page_content for doc in documents]
+    raw_scores = list(reranker.rerank(query, texts))
+    scores = [
+        s.relevance_score if hasattr(s, "relevance_score") else float(s)
+        for s in raw_scores
+    ]
+    return sorted(zip(documents, scores), key=lambda x: x[1], reverse=True)
+
+
+def rerank_with_scores(
+    query: str, documents: list, top_k: int | None = None
+) -> list[tuple[object, float]]:
+    """Re-rank documents and return (document, score) pairs."""
+    if not documents or not is_reranker_enabled():
+        return [(doc, doc.metadata.get("score", 0.0)) for doc in documents]
+
+    scored_docs = _score_documents(query, documents)
+    if top_k:
+        scored_docs = scored_docs[:top_k]
+
+    if scored_docs:
+        logger.info(
+            "Re-ranked %d docs → top score: %.4f, bottom: %.4f",
+            len(documents),
+            scored_docs[0][1],
+            scored_docs[-1][1],
+        )
+    return scored_docs
+
+
 def rerank(query: str, documents: list, top_k: int = None) -> list:
     """Re-rank documents using cross-encoder scoring.
 
@@ -65,34 +101,5 @@ def rerank(query: str, documents: list, top_k: int = None) -> list:
     if not is_reranker_enabled():
         return documents
 
-    reranker = get_reranker()
-
-    # Build query-document pairs
-    texts = [doc.page_content for doc in documents]
-    raw_scores = list(reranker.rerank(query, texts))
-
-    # Normalize scores: newer fastembed returns floats, older returns objects with .relevance_score
-    scores = [
-        s.relevance_score if hasattr(s, "relevance_score") else float(s)
-        for s in raw_scores
-    ]
-
-    # Sort by score descending
-    scored_docs = sorted(
-        zip(documents, scores),
-        key=lambda x: x[1],
-        reverse=True,
-    )
-
-    result = [doc for doc, _ in scored_docs]
-
-    if top_k:
-        result = result[:top_k]
-
-    logger.info(
-        f"Re-ranked {len(documents)} docs → top score: "
-        f"{scored_docs[0][1]:.4f}, "
-        f"bottom: {scored_docs[-1][1]:.4f}"
-    )
-
-    return result
+    scored_docs = rerank_with_scores(query, documents, top_k=top_k)
+    return [doc for doc, _ in scored_docs]

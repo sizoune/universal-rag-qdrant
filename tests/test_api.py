@@ -348,7 +348,7 @@ def test_chat_uses_web_fallback_when_enabled(monkeypatch):
     monkeypatch.setattr(
         api,
         "answer_with_web_fallback",
-        lambda q, h, vs, extra: ("Jawaban web", [], True, []),
+        lambda q, h, vs, extra, enable_web_search=False: ("Jawaban web", [], True, []),
     )
 
     resp = client.post(
@@ -366,19 +366,15 @@ def test_chat_ignores_web_when_global_disabled(monkeypatch):
     api = _load_api()
     client = TestClient(api.app)
     monkeypatch.setattr(api.config, "WEB_SEARCH_ENABLED", False)
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
 
-    class _FakeChain:
-        def invoke(self, _payload):
-            return {"answer": "Jawaban RAG", "context": []}
+    captured = {"enable_web_search": None}
 
-    monkeypatch.setattr(api, "_get_or_create_chain", lambda: _FakeChain())
+    def _fake_answer(q, h, vs, extra, enable_web_search=False):
+        captured["enable_web_search"] = enable_web_search
+        return ("Jawaban RAG", [], False, [])
 
-    sentinel = {"web": False}
-    monkeypatch.setattr(
-        api,
-        "answer_with_web_fallback",
-        lambda *a, **k: sentinel.__setitem__("web", True) or ("x", [], True, []),
-    )
+    monkeypatch.setattr(api, "answer_with_web_fallback", _fake_answer)
 
     resp = client.post(
         "/api/v1/chat",
@@ -389,7 +385,7 @@ def test_chat_ignores_web_when_global_disabled(monkeypatch):
     body = resp.json()
     assert body["answer"] == "Jawaban RAG"
     assert body["web_search_used"] is False
-    assert sentinel["web"] is False  # helper web TIDAK dipanggil
+    assert captured["enable_web_search"] is False
 
 
 def test_ingest_status_endpoint(monkeypatch):
@@ -419,15 +415,15 @@ def test_ingest_status_endpoint(monkeypatch):
 def test_chat_passes_system_prompt_to_chain(monkeypatch):
     api = _load_api()
     client = TestClient(api.app)
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
 
     captured = {}
 
-    class _StubChain:
-        def invoke(self, payload):
-            captured.update(payload)
-            return {"answer": "ok", "context": []}
+    def _fake_answer(q, h, vs, extra, enable_web_search=False):
+        captured["extra_system"] = extra
+        return ("ok", [], False, [])
 
-    monkeypatch.setattr(api, "_get_or_create_chain", lambda: _StubChain())
+    monkeypatch.setattr(api, "answer_with_web_fallback", _fake_answer)
     resp = client.post(
         "/api/v1/chat",
         headers=_auth_header(),
@@ -440,15 +436,15 @@ def test_chat_passes_system_prompt_to_chain(monkeypatch):
 def test_chat_without_system_prompt_passes_empty(monkeypatch):
     api = _load_api()
     client = TestClient(api.app)
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
 
     captured = {}
 
-    class _StubChain:
-        def invoke(self, payload):
-            captured.update(payload)
-            return {"answer": "ok", "context": []}
+    def _fake_answer(q, h, vs, extra, enable_web_search=False):
+        captured["extra_system"] = extra
+        return ("ok", [], False, [])
 
-    monkeypatch.setattr(api, "_get_or_create_chain", lambda: _StubChain())
+    monkeypatch.setattr(api, "answer_with_web_fallback", _fake_answer)
     resp = client.post(
         "/api/v1/chat", headers=_auth_header(), json={"question": "halo"}
     )

@@ -11,6 +11,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from src.citation import build_source_items
 from src.config import config
+from src.reranker import is_reranker_enabled, rerank_with_scores
 from src.web_search import search_web, web_context_text, web_results_to_documents
 from datetime import date
 import asyncio
@@ -57,7 +58,9 @@ SYSTEM_PROMPT_TEMPLATE = (
 
 NO_ANSWER_SENTINEL = "NO_ANSWER"
 
-NOT_FOUND_MSG = (
+NOT_FOUND_MSG = "Maaf, jawaban tidak ditemukan di dokumen."
+
+NOT_FOUND_WEB_MSG = (
     "Maaf, jawaban tidak ditemukan di dokumen maupun hasil pencarian web."
 )
 
@@ -173,6 +176,79 @@ def get_llm():
         return ChatOpenAI(model=model_name, api_key=api_key)
 
 
+def _apply_relevance_gate(query: str, docs: list) -> list:
+    """Drop retrieved chunks that fail the relevance gate.
+
+    With reranker: cross-encoder score must meet RERANKER_MIN_SCORE.
+    Without reranker: dense similarity score must meet SEARCH_SCORE_THRESHOLD
+    when scores are present in metadata; otherwise keep the retriever output.
+    """
+    if not docs:
+        return []
+
+    if is_reranker_enabled():
+        scored = rerank_with_scores(query, docs, top_k=config.MAX_SEARCH_RESULTS)
+        gated = []
+        for doc, score in scored:
+            if score >= config.RERANKER_MIN_SCORE:
+                doc.metadata["rerank_score"] = score
+                gated.append(doc)
+        if not gated:
+            top = scored[0][1] if scored else None
+            logger.info(
+                "All %d retrieved docs below reranker min score %.3f (top=%s).",
+                len(docs),
+                config.RERANKER_MIN_SCORE,
+                f"{top:.4f}" if top is not None else "n/a",
+            )
+        return gated
+
+    scored_docs = [d for d in docs if "score" in d.metadata]
+    if scored_docs:
+        gated = [
+            d
+            for d in scored_docs
+            if d.metadata.get("score", 0) >= config.SEARCH_SCORE_THRESHOLD
+        ]
+        if not gated:
+            logger.info(
+                "All %d retrieved docs below search score threshold %.3f.",
+                len(docs),
+                config.SEARCH_SCORE_THRESHOLD,
+            )
+        return gated[: config.MAX_SEARCH_RESULTS]
+
+    return docs[: config.MAX_SEARCH_RESULTS]
+
+
+def _retrieve_gated_docs(question: str, history: list, vector_store) -> list:
+    """History-aware retrieval followed by relevance gating."""
+    llm = get_llm()
+    retriever = build_history_aware_retriever(vector_store, llm)
+    docs = retriever.invoke({"input": question, "chat_history": history})
+    return _apply_relevance_gate(question, docs)
+
+
+def _context_text(docs: list) -> str:
+    return "\n".join(d.page_content for d in docs) if docs else ""
+
+
+def _invoke_llm(
+    question: str,
+    history: list,
+    context_text: str,
+    extra_system: str,
+    *,
+    with_sentinel: bool,
+    web: bool = False,
+) -> str:
+    sys_msg = _build_system_message(
+        context_text, extra_system, with_sentinel=with_sentinel, web=web
+    )
+    messages = [sys_msg] + list(history) + [HumanMessage(content=question)]
+    return (get_llm().invoke(messages).content or "").strip()
+
+
 def build_retriever(vector_store):
     """Single source of truth for the active retriever (dense+fallback or hybrid).
     Used by chat, streaming, AND the eval harness so all three retrieve identically."""
@@ -275,43 +351,83 @@ def _build_system_message(
 
 
 def answer_with_web_fallback(
-    question: str, history: list, vector_store, extra_system: str = ""
+    question: str,
+    history: list,
+    vector_store,
+    extra_system: str = "",
+    enable_web_search: bool = False,
 ) -> tuple[str, list, bool, list]:
-    """Jawab dari RAG; jika model tak bisa menjawab dari konteks (sentinel),
-    fallback ke web search lalu jawab ulang.
+    """Jawab dari RAG dengan sentinel; opsional fallback web search.
+
     Return (answer, sources, web_used, context_docs_used).
     context_docs_used adalah list Document yang benar-benar dikonsumsi LLM:
       - RAG menjawab -> context_docs dari retrieval
       - Fallback web -> web_results_to_documents(results)
-      - Fallback, tak ada hasil web -> []
-    Caller wajib menggerbang ini pada web aktif (request + global enabled)."""
-    llm = get_llm()
-    retriever = build_history_aware_retriever(vector_store, llm)
-    context_docs = retriever.invoke({"input": question, "chat_history": history})
-    context_text = (
-        "\n".join(d.page_content for d in context_docs) if context_docs else ""
-    )
+      - Tidak relevan / tidak ada jawaban -> []
+    """
+    context_docs = _retrieve_gated_docs(question, history, vector_store)
+    if not context_docs:
+        return NOT_FOUND_MSG, [], False, []
 
-    sys_msg = _build_system_message(context_text, extra_system, with_sentinel=True)
-    messages = [sys_msg] + list(history) + [HumanMessage(content=question)]
-    answer = (llm.invoke(messages).content or "").strip()
+    answer = _invoke_llm(
+        question,
+        history,
+        _context_text(context_docs),
+        extra_system,
+        with_sentinel=True,
+    )
 
     if answer != NO_ANSWER_SENTINEL:
         return answer, build_source_items(context_docs), False, context_docs
 
-    # ponytail: query web pakai pertanyaan mentah; follow-up anaforik bisa
-    # kurang presisi. Upgrade = condense pakai history (panggilan LLM ke-3).
-    results = search_web(question)
-    if not results:
+    if not enable_web_search:
         return NOT_FOUND_MSG, [], False, []
 
+    results = search_web(question)
+    if not results:
+        return NOT_FOUND_WEB_MSG, [], False, []
+
     web_docs = web_results_to_documents(results)
-    web_sys = _build_system_message(
-        web_context_text(results), extra_system, with_sentinel=False, web=True
+    web_answer = _invoke_llm(
+        question,
+        history,
+        web_context_text(results),
+        extra_system,
+        with_sentinel=False,
+        web=True,
     )
-    web_messages = [web_sys] + list(history) + [HumanMessage(content=question)]
-    web_answer = (llm.invoke(web_messages).content or "").strip()
     return web_answer, build_source_items(web_docs), True, web_docs
+
+
+async def _stream_llm_with_sentinel(llm, formatted):
+    """Stream tokens, buffering while output may still be the NO_ANSWER sentinel."""
+    buffer = []
+    emitted = False
+    full_answer = []
+    async for chunk in llm.astream(formatted):
+        token = chunk.content if hasattr(chunk, "content") else str(chunk)
+        if not token:
+            continue
+        if emitted:
+            full_answer.append(token)
+            yield token, "token"
+            continue
+        buffer.append(token)
+        joined = "".join(buffer).strip()
+        if NO_ANSWER_SENTINEL.startswith(joined):
+            continue
+        emitted = True
+        flushed = "".join(buffer)
+        full_answer.append(flushed)
+        yield flushed, "token"
+
+    joined_final = "".join(buffer).strip()
+    yield {
+        "emitted": emitted,
+        "buffer": buffer,
+        "full_answer": full_answer,
+        "joined_final": joined_final,
+    }, "sentinel_state"
 
 
 async def stream_chat_response(
@@ -323,94 +439,71 @@ async def stream_chat_response(
     enable_web_search: bool = False,
 ):
     """Async generator untuk SSE streaming. Dua fase: retrieval sync + LLM stream.
-    enable_web_search=True menambah deteksi sentinel + fallback web."""
+
+    Strict RAG: sentinel selalu aktif; chunk tidak relevan dibuang sebelum LLM.
+    enable_web_search=True menambah fallback web bila sentinel NO_ANSWER."""
     start = time.perf_counter()
     llm = get_llm()
-    retriever = build_history_aware_retriever(vector_store, llm)
 
-    # Phase A: retrieval history-aware (kosong -> input lewat apa adanya).
-    context_docs = retriever.invoke({"input": question, "chat_history": history})
-    context_text = (
-        "\n".join(doc.page_content for doc in context_docs) if context_docs else ""
-    )
+    context_docs = _retrieve_gated_docs(question, history, vector_store)
+    context_text = _context_text(context_docs)
 
     web_used = False
     sources_docs = context_docs
-    # Konteks yang benar-benar dikonsumsi LLM (untuk estimasi token akurat).
-    # Default = konteks RAG; akan diganti dengan web_context_text jika fallback.
     token_est_context = context_text
+    answer = ""
 
-    if not enable_web_search:
-        # Jalur lama — tidak berubah.
-        sys_msg = _build_system_message(context_text, extra_system, with_sentinel=False)
-        formatted = [sys_msg] + list(history) + [HumanMessage(content=question)]
-        full_answer = []
-        async for chunk in llm.astream(formatted):
-            token = chunk.content if hasattr(chunk, "content") else str(chunk)
-            if token:
-                full_answer.append(token)
-                yield token, "token"
-        answer = "".join(full_answer)
+    if not context_docs:
+        answer = NOT_FOUND_MSG
+        yield answer, "token"
     else:
-        # Jalur web-fallback: stream call #1 dengan supresi sentinel berbuffer.
-        # ponytail: buffer ditahan selama akumulasi masih prefiks "NO_ANSWER";
-        # begitu menyimpang -> flush. Bisa menunda <=1 token di kasus jawaban
-        # yang kebetulan diawali "N". Trade-off untuk mencegah sentinel bocor.
-        # ponytail: assumes the model obeys "emit EXACTLY NO_ANSWER, nothing else".
-        # If it appends text after the token, the buffer flushes it (sentinel could
-        # surface). Sync path uses strict == and is immune. Harden only if prod LLM
-        # is observed violating this.
         sys_msg = _build_system_message(context_text, extra_system, with_sentinel=True)
         formatted = [sys_msg] + list(history) + [HumanMessage(content=question)]
-        buffer = []
-        emitted = False
-        full_answer = []
-        async for chunk in llm.astream(formatted):
-            token = chunk.content if hasattr(chunk, "content") else str(chunk)
-            if not token:
-                continue
-            if emitted:
-                full_answer.append(token)
-                yield token, "token"
-                continue
-            buffer.append(token)
-            joined = "".join(buffer).strip()
-            if NO_ANSWER_SENTINEL.startswith(joined):
-                continue  # masih mungkin sentinel; tahan
-            # menyimpang -> jawaban nyata; flush buffer sekaligus
-            emitted = True
-            flushed = "".join(buffer)
-            full_answer.append(flushed)
-            yield flushed, "token"
 
-        joined_final = "".join(buffer).strip()
+        sentinel_state = None
+        async for data, event_type in _stream_llm_with_sentinel(llm, formatted):
+            if event_type == "token":
+                yield data, "token"
+            else:
+                sentinel_state = data
+
+        emitted = sentinel_state["emitted"]
+        joined_final = sentinel_state["joined_final"]
+        full_answer = sentinel_state["full_answer"]
+        buffer = sentinel_state["buffer"]
+
         if not emitted and joined_final == NO_ANSWER_SENTINEL:
-            results = await asyncio.to_thread(search_web, question)
-            if results:
-                web_ctx = web_context_text(results)
-                web_sys = _build_system_message(
-                    web_ctx, extra_system, with_sentinel=False, web=True
-                )
-                web_formatted = (
-                    [web_sys] + list(history) + [HumanMessage(content=question)]
-                )
-                full_answer = []
-                async for chunk in llm.astream(web_formatted):
-                    token = chunk.content if hasattr(chunk, "content") else str(chunk)
-                    if token:
-                        full_answer.append(token)
-                        yield token, "token"
-                answer = "".join(full_answer)
-                sources_docs = web_results_to_documents(results)
-                web_used = True
-                token_est_context = web_ctx
+            if enable_web_search:
+                results = await asyncio.to_thread(search_web, question)
+                if results:
+                    web_ctx = web_context_text(results)
+                    web_sys = _build_system_message(
+                        web_ctx, extra_system, with_sentinel=False, web=True
+                    )
+                    web_formatted = (
+                        [web_sys] + list(history) + [HumanMessage(content=question)]
+                    )
+                    full_answer = []
+                    async for chunk in llm.astream(web_formatted):
+                        token = chunk.content if hasattr(chunk, "content") else str(chunk)
+                        if token:
+                            full_answer.append(token)
+                            yield token, "token"
+                    answer = "".join(full_answer)
+                    sources_docs = web_results_to_documents(results)
+                    web_used = True
+                    token_est_context = web_ctx
+                else:
+                    answer = NOT_FOUND_WEB_MSG
+                    sources_docs = []
+                    yield answer, "token"
+                    token_est_context = ""
             else:
                 answer = NOT_FOUND_MSG
                 sources_docs = []
-                yield answer, "token"
                 token_est_context = ""
+                yield answer, "token"
         elif not emitted:
-            # buffer tertahan tapi bukan sentinel penuh (jawaban pendek) -> flush
             answer = "".join(buffer)
             if answer:
                 yield answer, "token"
@@ -450,7 +543,6 @@ async def stream_chat_response(
 def chat_interface(vector_store):
     """Interactive CLI loop for chatting."""
     print("\n--- Interactive Chat ('/new' sesi baru, '/exit' keluar) ---")
-    chain = get_chat_chain(vector_store)
 
     global chat_history
 
@@ -467,17 +559,18 @@ def chat_interface(vector_store):
 
         try:
             start = time.perf_counter()
-            response = chain.invoke({"input": user_input, "chat_history": chat_history})
+            answer, sources, _web_used, context_docs = answer_with_web_fallback(
+                user_input,
+                chat_history,
+                vector_store,
+                enable_web_search=False,
+            )
             elapsed = time.perf_counter() - start
 
-            answer = response.get("answer", "No answer generated.")
             print(f"AI: {answer}")
             print(f"\n⏱️  Waktu respons: {elapsed:.1f}s")
 
-            # Print structured sources (Indonesian display, deduplicated)
-            context_docs = response.get("context", [])
             if context_docs:
-                sources = build_source_items(context_docs)
                 print("\n📚 Sumber:")
                 for i, src in enumerate(sources, start=1):
                     label = src.filename or src.source
@@ -487,15 +580,12 @@ def chat_interface(vector_store):
                         if loc.chunk_preview:
                             print(f'       "{loc.chunk_preview}"')
 
-            # Print token usage
             print_token_usage(context_docs, chat_history, user_input, answer)
 
-            # Update Memory Window
             chat_history.extend(
                 [HumanMessage(content=user_input), AIMessage(content=answer)]
             )
 
-            # Truncate memory as per config
             if len(chat_history) > config.MEMORY_WINDOW_SIZE * 2:
                 chat_history = chat_history[-config.MEMORY_WINDOW_SIZE * 2 :]
 

@@ -365,28 +365,14 @@ def chat_endpoint(payload: ChatRequest):
     web_active = bool(payload.enable_web_search and config.WEB_SEARCH_ENABLED)
 
     start = time.perf_counter()
-    if web_active:
-        with _request_duration.labels(endpoint="/chat").time():
-            answer, sources, web_used, context_docs = answer_with_web_fallback(
-                payload.question,
-                history,
-                _get_or_create_vector_store(),
-                (payload.system_prompt or "").strip(),
-            )
-    else:
-        chain = _get_or_create_chain()
-        with _request_duration.labels(endpoint="/chat").time():
-            response = chain.invoke(
-                {
-                    "input": payload.question,
-                    "chat_history": history,
-                    "extra_system": (payload.system_prompt or "").strip(),
-                }
-            )
-        answer = response.get("answer", "No answer generated.")
-        context_docs = response.get("context", [])
-        sources = build_source_items(context_docs)
-        web_used = False
+    with _request_duration.labels(endpoint="/chat").time():
+        answer, sources, web_used, context_docs = answer_with_web_fallback(
+            payload.question,
+            history,
+            _get_or_create_vector_store(),
+            (payload.system_prompt or "").strip(),
+            enable_web_search=web_active,
+        )
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
     token_usage = _calculate_token_usage(context_docs, history, payload.question, answer)
