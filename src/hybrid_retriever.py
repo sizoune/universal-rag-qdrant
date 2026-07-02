@@ -104,27 +104,25 @@ class HybridRetriever(BaseRetriever):
                 doc.metadata["score"] = point.score
                 documents.append(doc)
 
-            # Filter by score threshold. NOTE: after RRF fusion, point.score is the
-            # fused reciprocal-rank score (~1/rank, far below any cosine-style
-            # threshold), so this filter is effectively always empty in hybrid mode
-            # and we keep the full fused pool. The reranker below is what selects top-k.
-            filtered_documents = [
-                d
-                for d in documents
-                if d.metadata.get("score", 0) >= self.score_threshold
-            ]
-            if filtered_documents:
-                documents = filtered_documents
+            # RRF fusion scores are NOT cosine similarities (rank-1 can be 1.0 while
+            # rank-2 is ~0.33). Applying SEARCH_SCORE_THRESHOLD here wrongly keeps only
+            # the top fused hit when its score >= threshold — e.g. a headline chunk
+            # "SIAPA BUPATI TABALONG?" with no answer body.
+            if not has_sparse:
+                filtered_documents = [
+                    d
+                    for d in documents
+                    if d.metadata.get("score", 0) >= self.score_threshold
+                ]
+                if filtered_documents:
+                    documents = filtered_documents
+                elif not (is_reranker_enabled() and documents):
+                    logger.info(
+                        "No dense docs passed score_threshold=%.3f. Using top-k fallback.",
+                        self.score_threshold,
+                    )
+                    documents = documents[: self.k]
             elif not (is_reranker_enabled() and documents):
-                # ponytail: only collapse to top-k when nothing will rerank the pool.
-                # Truncating here BEFORE the reranker was the bug: it dropped answer
-                # chunks that RRF ranked past position k (e.g. pos 13/20) even though
-                # the reranker ranks them #1 once it sees them. Keep the full fused
-                # pool so the reranker gets a chance at every candidate.
-                logger.info(
-                    "No hybrid docs passed score_threshold=%.3f. Using top-k fallback.",
-                    self.score_threshold,
-                )
                 documents = documents[: self.k]
 
             # Re-rank if enabled (reranks the FULL fused pool, returns top-k)

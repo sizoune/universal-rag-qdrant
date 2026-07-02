@@ -60,6 +60,39 @@ def test_reranker_sees_full_pool_not_truncated(_mock_sparse):
 
 
 @patch("src.hybrid_retriever.encode_sparse", return_value=[{"indices": [1], "values": [1.0]}])
+def test_rrf_top_score_must_not_collapse_pool(_mock_sparse):
+    """Rank-1 RRF score can be 1.0 (>= 0.7) — must not filter down to a single doc."""
+    k = 10
+    points = [
+        SimpleNamespace(
+            payload={"page_content": f"doc {i}", "metadata": {"source": f"s{i}"}},
+            score=1.0 if i == 0 else 1.0 / (i + 2),
+        )
+        for i in range(20)
+    ]
+    vs = MagicMock()
+    vs.embeddings.embed_query.return_value = [0.0] * 8
+    vs.vector_name = "dense"
+    vs.client.get_collection.return_value = SimpleNamespace(
+        config=SimpleNamespace(params=SimpleNamespace(sparse_vectors={"sparse": {}}))
+    )
+    vs.client.query_points.return_value = SimpleNamespace(points=points)
+    retriever = HybridRetriever(vector_store=vs, score_threshold=0.7, k=k)
+    captured = {}
+
+    def fake_rerank(query, documents, top_k=None):
+        captured["n_in"] = len(documents)
+        return documents[:top_k]
+
+    with patch("src.hybrid_retriever.is_reranker_enabled", return_value=True), \
+         patch("src.hybrid_retriever.rerank", side_effect=fake_rerank):
+        docs = retriever._get_relevant_documents("siapa bupati tabalong")
+
+    assert captured["n_in"] == 20
+    assert len(docs) == k
+
+
+@patch("src.hybrid_retriever.encode_sparse", return_value=[{"indices": [1], "values": [1.0]}])
 def test_no_reranker_still_caps_at_k(_mock_sparse):
     """Without a reranker, the fallback must still cap the pool at k."""
     k = 10
