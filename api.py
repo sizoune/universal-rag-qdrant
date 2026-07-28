@@ -1,11 +1,15 @@
 import json
 import os
+import re
+import tempfile
 import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Literal
+from urllib.parse import unquote, urljoin, urlparse
 
+import requests
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,8 +40,12 @@ from src.api_models import (
     FileListResponse,
     IngestPathRequest,
     IngestStatusResponse,
+    IngestUrlRequest,
     IngestWebRequest,
     OperationResponse,
+    RetrieveRequest,
+    RetrievedChunk,
+    RetrieveResponse,
     TokenUsage,
     UploadFileItem,
     UploadFileListResponse,
@@ -47,10 +55,12 @@ from src.chat import (
     answer_with_web_fallback,
     estimate_tokens,
     get_chat_chain,
+    retrieve_documents,
     stream_chat_response,
 )
-from src.citation import build_source_items
+from src.citation import build_source_items, format_display
 from src.config import config
+from src.namespace import ApiClient, resolve_write_namespace
 from src.file_index import (
     decode_source_id,
     encode_source_id,
@@ -160,7 +170,12 @@ def _iso_from_timestamp(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=UTC).isoformat()
 
 
-def _enrich_docs_metadata(docs: list, source: str | None = None, source_type: str | None = None):
+def _enrich_docs_metadata(
+    docs: list,
+    source: str | None = None,
+    source_type: str | None = None,
+    namespace: str | None = None,
+):
     ingested_at = _iso_now()
     for doc in docs:
         if source is not None:
@@ -168,6 +183,14 @@ def _enrich_docs_metadata(docs: list, source: str | None = None, source_type: st
         if source_type is not None:
             doc.metadata["source_type"] = source_type
         doc.metadata["ingested_at"] = ingested_at
+        if namespace:
+            doc.metadata["namespace"] = namespace
+
+
+def _namespace_for_client(client: ApiClient | None) -> str:
+    if client is None:
+        return (config.DEFAULT_WRITE_NAMESPACE or "").strip()
+    return resolve_write_namespace(client, config.DEFAULT_WRITE_NAMESPACE)
 
 
 def _set_ingest_status_start(task: str):
@@ -194,43 +217,235 @@ def _set_ingest_status_finish(message: str):
         _ingest_status["last_message"] = message
 
 
-def _run_ingest_path(path: str) -> tuple[int, int, int]:
+def _run_ingest_path(
+    path: str, client: ApiClient | None = None
+) -> tuple[int, int, int]:
     docs, changed_sources = process_directory(path, on_file_start=_set_ingest_status_current_source)
     if not docs:
         return 0, 0, 0
 
-    _enrich_docs_metadata(docs)
+    namespace = _namespace_for_client(client)
+    _enrich_docs_metadata(docs, namespace=namespace)
 
     deleted_chunks = 0
     for source in changed_sources:
-        deleted_chunks += delete_by_source(source)
+        deleted_chunks += delete_by_source(source, namespace=namespace or None)
 
     ingest_documents(docs, _get_or_create_vector_store())
     return len(changed_sources), deleted_chunks, len(docs)
 
 
-def _ingest_single_file(filepath: str, source_type: str = "local") -> tuple[int, int]:
+def _ingest_single_file(
+    filepath: str,
+    source_type: str = "local",
+    client: ApiClient | None = None,
+    source: str | None = None,
+) -> tuple[int, int]:
     abs_path = os.path.abspath(filepath)
+    source_key = source or abs_path
     try:
+        # OCR_GATEWAY_URL enables OCR during PDF/PPTX parse (see src.ocr_client).
         chunks = load_local_document(abs_path)
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not chunks:
         return 0, 0
 
+    namespace = _namespace_for_client(client)
     # load_local_document already returns final chunks; just stamp metadata.
-    _enrich_docs_metadata(chunks, source=abs_path, source_type=source_type)
+    _enrich_docs_metadata(
+        chunks, source=source_key, source_type=source_type, namespace=namespace
+    )
 
-    deleted_chunks = delete_by_source(abs_path)
+    deleted_chunks = delete_by_source(source_key, namespace=namespace or None)
     ingest_documents(chunks, _get_or_create_vector_store())
     return deleted_chunks, len(chunks)
+
+
+_REMOTE_INGEST_EXTS = frozenset(
+    {".pdf", ".docx", ".doc", ".txt", ".md", ".csv", ".pptx"}
+)
+_REMOTE_INGEST_CONTENT_TYPES = frozenset(
+    {
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword",
+        "text/plain",
+        "text/markdown",
+        "text/x-markdown",
+        "text/csv",
+        "application/csv",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        # Presigned MinIO/S3 often omits a precise type.
+        "application/octet-stream",
+        "binary/octet-stream",
+    }
+)
+_CONTENT_DISPOSITION_FILENAME_RE = re.compile(
+    r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?',
+    re.IGNORECASE,
+)
+
+
+def _validate_remote_ingest_url(url: str) -> str:
+    """Allow http/https only. Skips public-IP SSRF checks so private MinIO
+    presigned URLs work for Phase 3 PPID ingest."""
+    cleaned = (url or "").strip()
+    if not cleaned:
+        raise ValueError("url cannot be empty")
+    parsed = urlparse(cleaned)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("Only http/https URLs are allowed")
+    if not (parsed.hostname or "").strip():
+        raise ValueError("URL hostname is required")
+    return cleaned
+
+
+def _filename_from_content_disposition(header: str | None) -> str | None:
+    if not header:
+        return None
+    match = _CONTENT_DISPOSITION_FILENAME_RE.search(header)
+    if not match:
+        return None
+    return unquote(match.group(1).strip().strip("'"))
+
+
+def _guess_remote_filename(url: str, content_disposition: str | None) -> str:
+    from_header = _filename_from_content_disposition(content_disposition)
+    if from_header:
+        return os.path.basename(from_header) or from_header
+    path = unquote(urlparse(url).path or "")
+    name = os.path.basename(path)
+    return name or "remote.bin"
+
+
+def _remote_ingest_type_allowed(filename: str, content_type: str | None) -> bool:
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in _REMOTE_INGEST_EXTS:
+        return True
+    if not content_type:
+        return False
+    media = content_type.split(";", 1)[0].strip().lower()
+    return media in _REMOTE_INGEST_CONTENT_TYPES and media not in {
+        "application/octet-stream",
+        "binary/octet-stream",
+    }
+
+
+def _download_remote_file(url: str) -> tuple[str, str]:
+    """Download URL to a temp file. Returns (temp_path, filename).
+
+    Enforces UPLOAD_MAX_BYTES via Content-Length and/or streamed byte cap.
+    Does not use validate_public_http_url (private MinIO hosts are expected).
+    """
+    max_bytes = config.UPLOAD_MAX_BYTES if config.UPLOAD_MAX_BYTES > 0 else 104857600
+    max_redirects = 5
+    current_url = url
+    last_error: Exception | None = None
+
+    for _ in range(max_redirects + 1):
+        current_url = _validate_remote_ingest_url(current_url)
+        try:
+            with requests.get(
+                current_url,
+                timeout=60,
+                allow_redirects=False,
+                stream=True,
+            ) as response:
+                if 300 <= response.status_code < 400 and response.headers.get(
+                    "Location"
+                ):
+                    current_url = urljoin(current_url, response.headers["Location"])
+                    continue
+
+                if response.status_code >= 400:
+                    raise ValueError(
+                        f"Failed to download URL (HTTP {response.status_code})"
+                    )
+
+                content_length = response.headers.get("Content-Length")
+                if content_length is not None:
+                    try:
+                        declared = int(content_length)
+                    except ValueError as exc:
+                        raise ValueError("Invalid Content-Length header") from exc
+                    if declared > max_bytes:
+                        raise ValueError(
+                            f"Remote file exceeds max allowed size ({max_bytes} bytes)"
+                        )
+
+                filename = _guess_remote_filename(
+                    current_url, response.headers.get("Content-Disposition")
+                )
+                content_type = response.headers.get("Content-Type")
+                if not _remote_ingest_type_allowed(filename, content_type):
+                    raise ValueError(
+                        "Unsupported remote file type; allowed: "
+                        + ", ".join(sorted(_REMOTE_INGEST_EXTS))
+                    )
+
+                ext = os.path.splitext(filename)[1].lower()
+                if ext not in _REMOTE_INGEST_EXTS:
+                    # Content-Type allowed but no usable extension — invent one.
+                    media = (content_type or "").split(";", 1)[0].strip().lower()
+                    ext_map = {
+                        "application/pdf": ".pdf",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+                        "application/msword": ".doc",
+                        "text/plain": ".txt",
+                        "text/markdown": ".md",
+                        "text/x-markdown": ".md",
+                        "text/csv": ".csv",
+                        "application/csv": ".csv",
+                        "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+                    }
+                    ext = ext_map.get(media, ".bin")
+                    filename = f"{filename}{ext}" if not filename.endswith(ext) else filename
+
+                fd, temp_path = tempfile.mkstemp(
+                    suffix=os.path.splitext(filename)[1].lower() or ".bin",
+                    prefix="ingest_url_",
+                )
+                total = 0
+                try:
+                    with os.fdopen(fd, "wb") as out:
+                        for chunk in response.iter_content(chunk_size=1024 * 1024):
+                            if not chunk:
+                                continue
+                            total += len(chunk)
+                            if total > max_bytes:
+                                raise ValueError(
+                                    f"Remote file exceeds max allowed size ({max_bytes} bytes)"
+                                )
+                            out.write(chunk)
+                except Exception:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                    raise
+
+                if total == 0:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                    raise ValueError("Remote file is empty")
+
+                return temp_path, filename
+        except requests.RequestException as exc:
+            last_error = exc
+            raise ValueError(f"Failed to download URL: {exc}") from exc
+
+    if last_error:
+        raise ValueError(f"Failed to download URL: {last_error}") from last_error
+    raise ValueError("Too many redirects while downloading URL")
 
 
 def _is_web_source(source: str) -> bool:
     return source.startswith("http://") or source.startswith("https://")
 
 
-def _reingest_source(source: str) -> OperationResponse:
+def _reingest_source(
+    source: str, client: ApiClient | None = None
+) -> OperationResponse:
+    namespace = _namespace_for_client(client)
     if _is_web_source(source):
         try:
             docs, changed = parse_web_url(source)
@@ -246,8 +461,10 @@ def _reingest_source(source: str) -> OperationResponse:
             )
         if not docs:
             raise HTTPException(status_code=500, detail="Failed to parse web content")
-        _enrich_docs_metadata(docs, source=source, source_type="web")
-        deleted_chunks = delete_by_source(source)
+        _enrich_docs_metadata(
+            docs, source=source, source_type="web", namespace=namespace
+        )
+        deleted_chunks = delete_by_source(source, namespace=namespace or None)
         ingest_documents(docs, _get_or_create_vector_store())
         return OperationResponse(
             success=True,
@@ -271,7 +488,9 @@ def _reingest_source(source: str) -> OperationResponse:
             raise HTTPException(status_code=404, detail="local source file not found")
 
     try:
-        deleted_chunks, added_chunks = _ingest_single_file(actual_source, source_type="local")
+        deleted_chunks, added_chunks = _ingest_single_file(
+            actual_source, source_type="local", client=client
+        )
         if added_chunks == 0:
             raise HTTPException(status_code=400, detail="source cannot be ingested")
         return OperationResponse(
@@ -439,11 +658,76 @@ def reset_chat_session(session_id: str):
     )
 
 
+@api_router.post("/retrieve", response_model=RetrieveResponse)
+def retrieve_endpoint(
+    payload: RetrieveRequest,
+    client: ApiClient = Depends(verify_api_key),
+):
+    """Retrieve context chunks + citations without calling the LLM.
+
+    Knowledge-space filter comes from the bearer token scope, never from the
+    request body — so clients cannot widen their read access.
+    """
+    if not payload.question or not payload.question.strip():
+        raise HTTPException(status_code=400, detail="question cannot be empty")
+
+    start = time.perf_counter()
+    previous_k = config.MAX_SEARCH_RESULTS
+    if payload.top_k is not None:
+        config.MAX_SEARCH_RESULTS = payload.top_k
+    try:
+        with _request_duration.labels(endpoint="/retrieve").time():
+            docs = retrieve_documents(
+                payload.question,
+                _get_or_create_vector_store(),
+                read_namespaces=client.read_namespaces,
+            )
+    finally:
+        config.MAX_SEARCH_RESULTS = previous_k
+
+    chunks: list[RetrievedChunk] = []
+    for doc in docs:
+        meta = dict(doc.metadata or {})
+        source = str(meta.get("source") or "Unknown")
+        source_type = str(meta.get("source_type") or "local")
+        heading = meta.get("heading_path")
+        if heading is not None and not isinstance(heading, list):
+            heading = None
+        filename = None
+        if source_type != "web" and not source.startswith(("http://", "https://")):
+            filename = os.path.basename(source) or None
+        chunks.append(
+            RetrievedChunk(
+                text=doc.page_content or "",
+                source=source,
+                source_type=source_type,
+                filename=filename,
+                page=meta.get("page"),
+                heading_path=heading,
+                chunk_kind=meta.get("chunk_kind"),
+                namespace=meta.get("namespace"),
+                score=meta.get("score") or meta.get("rerank_score"),
+                display=format_display(meta, source_type),
+            )
+        )
+
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+    return RetrieveResponse(
+        chunks=chunks,
+        sources=build_source_items(docs),
+        elapsed_ms=elapsed_ms,
+    )
+
+
 @api_router.post("/ingest/web", response_model=OperationResponse)
-def ingest_web(payload: IngestWebRequest):
+def ingest_web(
+    payload: IngestWebRequest,
+    client: ApiClient = Depends(verify_api_key),
+):
     if not payload.url or not payload.url.strip():
         raise HTTPException(status_code=400, detail="url cannot be empty")
 
+    namespace = _namespace_for_client(client)
     _ingest_operations.labels(source_type="web").inc()
     with _ingest_lock:
         _set_ingest_status_start("ingest_web")
@@ -468,8 +752,15 @@ def ingest_web(payload: IngestWebRequest):
                 status_message = "Failed to parse web content"
                 raise HTTPException(status_code=500, detail="Failed to parse web content")
 
-            _enrich_docs_metadata(docs, source=payload.url.strip(), source_type="web")
-            deleted_chunks = delete_by_source(payload.url.strip())
+            _enrich_docs_metadata(
+                docs,
+                source=payload.url.strip(),
+                source_type="web",
+                namespace=namespace,
+            )
+            deleted_chunks = delete_by_source(
+                payload.url.strip(), namespace=namespace or None
+            )
             ingest_documents(docs, _get_or_create_vector_store())
             result = OperationResponse(
                 success=True,
@@ -484,8 +775,70 @@ def ingest_web(payload: IngestWebRequest):
             _set_ingest_status_finish(status_message)
 
 
+@api_router.post("/ingest/url", response_model=OperationResponse)
+def ingest_url(
+    payload: IngestUrlRequest,
+    client: ApiClient = Depends(verify_api_key),
+):
+    """Download a remote file (presigned S3/MinIO OK) and ingest into write_namespace."""
+    try:
+        url = _validate_remote_ingest_url(payload.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    source = (payload.source or "").strip() or url
+    source_type = (payload.source_type or "remote").strip() or "remote"
+    _ingest_operations.labels(source_type="url").inc()
+
+    with _ingest_lock:
+        _set_ingest_status_start("ingest_url")
+        _set_ingest_status_current_source(source)
+        status_message = "URL ingestion completed"
+        temp_path: str | None = None
+        try:
+            try:
+                temp_path, _filename = _download_remote_file(url)
+            except ValueError as exc:
+                status_message = str(exc)
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+            deleted_chunks, added_chunks = _ingest_single_file(
+                temp_path,
+                source_type=source_type,
+                client=client,
+                source=source,
+            )
+            if added_chunks == 0:
+                result = OperationResponse(
+                    success=True,
+                    message="No supported content found in remote file",
+                    processed_files=0,
+                    deleted_chunks=deleted_chunks,
+                    added_chunks=0,
+                )
+                status_message = result.message
+                return result
+
+            result = OperationResponse(
+                success=True,
+                message="URL ingestion completed",
+                processed_files=1,
+                deleted_chunks=deleted_chunks,
+                added_chunks=added_chunks,
+            )
+            status_message = result.message
+            return result
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
+            _set_ingest_status_finish(status_message)
+
+
 @api_router.post("/ingest/file-path", response_model=OperationResponse)
-def ingest_file_path(payload: IngestPathRequest):
+def ingest_file_path(
+    payload: IngestPathRequest,
+    client: ApiClient = Depends(verify_api_key),
+):
     _ingest_operations.labels(source_type="file").inc()
     path_raw = (payload.path or "").strip()
     if not path_raw:
@@ -505,7 +858,9 @@ def ingest_file_path(payload: IngestPathRequest):
         status_message = "Path ingestion completed"
         try:
             if os.path.isfile(path):
-                deleted_chunks, added_chunks = _ingest_single_file(path, source_type="local")
+                deleted_chunks, added_chunks = _ingest_single_file(
+                    path, source_type="local", client=client
+                )
                 if added_chunks == 0:
                     result = OperationResponse(
                         success=True,
@@ -526,7 +881,9 @@ def ingest_file_path(payload: IngestPathRequest):
                 status_message = result.message
                 return result
 
-            processed_files, deleted_chunks, added_chunks = _run_ingest_path(path)
+            processed_files, deleted_chunks, added_chunks = _run_ingest_path(
+                path, client=client
+            )
             result = OperationResponse(
                 success=True,
                 message="Path ingestion completed",
@@ -541,7 +898,7 @@ def ingest_file_path(payload: IngestPathRequest):
 
 
 @api_router.post("/ingest/uploads", response_model=OperationResponse)
-def ingest_uploads():
+def ingest_uploads(client: ApiClient = Depends(verify_api_key)):
     _ingest_operations.labels(source_type="uploads").inc()
     uploads_dir = config.UPLOADS_DIR.strip() or "uploads"
     os.makedirs(uploads_dir, exist_ok=True)
@@ -550,7 +907,9 @@ def ingest_uploads():
         _set_ingest_status_start("ingest_uploads")
         status_message = "Uploads ingestion completed"
         try:
-            processed_files, deleted_chunks, added_chunks = _run_ingest_path(uploads_dir)
+            processed_files, deleted_chunks, added_chunks = _run_ingest_path(
+                uploads_dir, client=client
+            )
 
             # After successful ingest, move files to S3 and clean up local
             s3_moved = 0
@@ -628,8 +987,12 @@ def list_files(
         default="last_seen"
     ),
     sort_dir: Literal["asc", "desc"] = Query(default="desc"),
+    client: ApiClient = Depends(verify_api_key),
 ):
-    all_sources = list_indexed_sources(_get_or_create_vector_store())
+    all_sources = list_indexed_sources(
+        _get_or_create_vector_store(),
+        read_namespaces=client.read_namespaces,
+    )
 
     # Check S3 status for each source
     s3_keys: set[str] = set()
@@ -668,11 +1031,15 @@ def list_files(
 def list_uploads(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=10),
+    client: ApiClient = Depends(verify_api_key),
 ):
     uploads_dir = os.path.abspath(config.UPLOADS_DIR.strip() or "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
 
-    indexed_items = list_indexed_sources(_get_or_create_vector_store())
+    indexed_items = list_indexed_sources(
+        _get_or_create_vector_store(),
+        read_namespaces=client.read_namespaces,
+    )
     indexed_by_source = {item["source"]: item for item in indexed_items if item.get("source")}
 
     all_files: list[dict] = []
@@ -720,7 +1087,10 @@ def list_uploads(
 
 
 @api_router.delete("/uploads/{upload_id}", response_model=OperationResponse)
-def delete_upload(upload_id: str):
+def delete_upload(
+    upload_id: str,
+    client: ApiClient = Depends(verify_api_key),
+):
     try:
         upload_path = os.path.abspath(decode_source_id(upload_id))
     except ValueError as exc:
@@ -732,8 +1102,9 @@ def delete_upload(upload_id: str):
     if not os.path.exists(upload_path) or not os.path.isfile(upload_path):
         raise HTTPException(status_code=404, detail="upload file not found")
 
+    namespace = _namespace_for_client(client) or None
     with _ingest_lock:
-        deleted_chunks = delete_by_source(upload_path)
+        deleted_chunks = delete_by_source(upload_path, namespace=namespace)
         os.remove(upload_path)
 
         # Also delete from S3 if enabled
@@ -800,7 +1171,10 @@ def upload_file(file: UploadFile = File(...)):
 
 
 @api_router.put("/files/{source_id}", response_model=OperationResponse)
-def reingest_source(source_id: str):
+def reingest_source(
+    source_id: str,
+    client: ApiClient = Depends(verify_api_key),
+):
     _file_operations.labels(operation="reingest").inc()
     try:
         source = decode_source_id(source_id)
@@ -811,7 +1185,7 @@ def reingest_source(source_id: str):
         _set_ingest_status_start("reingest_source")
         status_message = "Source re-ingest completed"
         try:
-            result = _reingest_source(source)
+            result = _reingest_source(source, client=client)
             status_message = result.message
             return result
         finally:
@@ -819,12 +1193,17 @@ def reingest_source(source_id: str):
 
 
 @api_router.post("/files/reingest-all", response_model=OperationResponse)
-def reingest_all_sources():
+def reingest_all_sources(client: ApiClient = Depends(verify_api_key)):
     with _ingest_lock:
         _set_ingest_status_start("reingest_all_sources")
         status_message = "Re-ingest all completed"
         try:
-            sources = list_indexed_sources(_get_or_create_vector_store())
+            # Scope to the caller's readable namespaces so a PPID token cannot
+            # pull tabalong-umum (or other) sources into its write_namespace.
+            sources = list_indexed_sources(
+                _get_or_create_vector_store(),
+                read_namespaces=client.read_namespaces,
+            )
             if not sources:
                 result = OperationResponse(
                     success=True,
@@ -848,7 +1227,7 @@ def reingest_all_sources():
                 if not source:
                     continue
                 try:
-                    result = _reingest_source(source)
+                    result = _reingest_source(source, client=client)
                     processed += 1
                     total_deleted += result.deleted_chunks or 0
                     total_added += result.added_chunks or 0
@@ -914,15 +1293,19 @@ def migrate_uploads_to_s3():
 
 
 @api_router.delete("/files/{source_id}", response_model=OperationResponse)
-def delete_source(source_id: str):
+def delete_source(
+    source_id: str,
+    client: ApiClient = Depends(verify_api_key),
+):
     _file_operations.labels(operation="delete").inc()
     try:
         source = decode_source_id(source_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    namespace = _namespace_for_client(client) or None
     with _ingest_lock:
-        deleted_chunks = delete_by_source(source)
+        deleted_chunks = delete_by_source(source, namespace=namespace)
     return OperationResponse(
         success=True,
         message="Source deleted",

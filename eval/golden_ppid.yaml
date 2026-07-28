@@ -1,0 +1,38 @@
+# Golden retrieval set for PPID Tanya Dokumen (namespace: ppid).
+#
+# Thresholds AGREED BEFORE seeing results (Fase 4 / 2026-07-28):
+# - hit@5 (correct document in top 5) ≥ 80%
+# - zero numeric answers without verbatim quotation + page number
+#   (enforced at the PPID agent layer; this file measures retrieval only)
+#
+# Status: DRAFT seed for closed release. Expand to 30–50 with PPID Utama
+# using real citizen paraphrases once the corpus is fully indexed.
+#
+# Run (from rag-qdrant, with PPID token / ppid+tabalong-umum read scope):
+#   GOLDEN_FILE=eval/golden_ppid.yaml python eval_retrieval.py
+
+- question: "Apa visi PPID Kabupaten Tabalong?"
+  expect_source: ["ppid:profile:visi-misi", "visi-misi"]
+  expect_substring: ["visi", "PPID"]
+
+- question: "Bagaimana cara mengajukan permohonan informasi publik?"
+  expect_source: ["ppid:prosedur:layanan-publik"]
+  expect_substring: ["permohonan", "formulir"]
+
+- question: "SKPD mana yang mengurus kependudukan?"
+  expect_source: ["ppid:skpd:"]
+  expect_substring: ["kependudukan"]
+
+- question: "Apa saja butir informasi pada DIP yang wajib dipublikasikan berkala?"
+  expect_source: ["ppid:dip:"]
+  expect_substring: ["informasi"]
+
+# APBD numeric questions — require table-header-aware chunks after full ingest.
+# Keep placeholders until the first APBD PDF is in namespace ppid.
+- question: "Berapa belanja pegawai pada APBD Kabupaten Tabalong tahun terakhir yang dipublikasikan?"
+  expect_source: ["ppid:document:"]
+  expect_substring: ["belanja", "pegawai"]
+
+- question: "Di dokumen perubahan APBD, kolom SESUDAH PERUBAHAN untuk belanja modal berapa?"
+  expect_source: ["ppid:document:"]
+  expect_substring: ["SESUDAH", "PERUBAHAN"]

@@ -249,9 +249,14 @@ def _invoke_llm(
     return (get_llm().invoke(messages).content or "").strip()
 
 
-def build_retriever(vector_store):
+def build_retriever(
+    vector_store,
+    read_namespaces: tuple[str, ...] | None = None,
+):
     """Single source of truth for the active retriever (dense+fallback or hybrid).
-    Used by chat, streaming, AND the eval harness so all three retrieve identically."""
+    Used by chat, streaming, retrieve-only, AND the eval harness so all retrieve
+    identically. ``read_namespaces`` scopes hybrid search; dense mode applies
+    the same filter when provided."""
     if config.SEARCH_MODE.lower() == "hybrid":
         logger.info("Using HYBRID search mode (dense + sparse BM25)")
         from src.hybrid_retriever import HybridRetriever
@@ -260,24 +265,49 @@ def build_retriever(vector_store):
             vector_store=vector_store,
             score_threshold=config.SEARCH_SCORE_THRESHOLD,
             k=config.MAX_SEARCH_RESULTS,
+            read_namespaces=read_namespaces,
         )
 
     logger.info("Using DENSE search mode")
+    from src.namespace import build_namespace_filter
+
+    ns_filter = build_namespace_filter(read_namespaces)
+    threshold_kwargs = {
+        "score_threshold": config.SEARCH_SCORE_THRESHOLD,
+        "k": config.MAX_SEARCH_RESULTS,
+    }
+    similarity_kwargs = {"k": config.MAX_SEARCH_RESULTS}
+    if ns_filter is not None:
+        threshold_kwargs["filter"] = ns_filter
+        similarity_kwargs["filter"] = ns_filter
     threshold_retriever = vector_store.as_retriever(
         search_type="similarity_score_threshold",
-        search_kwargs={
-            "score_threshold": config.SEARCH_SCORE_THRESHOLD,
-            "k": config.MAX_SEARCH_RESULTS,
-        },
+        search_kwargs=threshold_kwargs,
     )
     similarity_retriever = vector_store.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": config.MAX_SEARCH_RESULTS},
+        search_kwargs=similarity_kwargs,
     )
     return DenseThresholdFallbackRetriever(
         threshold_retriever=threshold_retriever,
         similarity_retriever=similarity_retriever,
     )
+
+
+def retrieve_documents(
+    question: str,
+    vector_store,
+    read_namespaces: tuple[str, ...] | None = None,
+) -> list:
+    """Retrieve context chunks without calling the LLM.
+
+    Used by the retrieve-only API so callers (e.g. PPID's Mastra agent) can
+    own the generation step themselves.
+    """
+    if not question or not question.strip():
+        return []
+    retriever = build_retriever(vector_store, read_namespaces=read_namespaces)
+    return list(retriever.invoke(question.strip()))
 
 
 def build_history_aware_retriever(vector_store, llm):

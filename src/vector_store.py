@@ -3,6 +3,7 @@ from qdrant_client.http import models as rest
 from langchain_qdrant import QdrantVectorStore
 from src.config import config
 from src.embedding_manager import get_embedder
+from src.namespace import NAMESPACE_PAYLOAD_KEY
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,23 @@ def get_qdrant_client() -> QdrantClient:
     else:
         client = QdrantClient(url=config.QDRANT_URL)
     return client
+
+
+def ensure_namespace_payload_index(client: QdrantClient | None = None) -> None:
+    """Create a keyword payload index on metadata.namespace (idempotent)."""
+    client = client or get_qdrant_client()
+    collection_name = config.QDRANT_COLLECTION_NAME
+    try:
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name=NAMESPACE_PAYLOAD_KEY,
+            field_schema=rest.PayloadSchemaType.KEYWORD,
+        )
+        logger.info("Payload index ensured on %s", NAMESPACE_PAYLOAD_KEY)
+    except Exception as exc:
+        # Already exists or collection missing — both fine at call sites that
+        # create the collection first.
+        logger.debug("Payload index create skipped: %s", exc)
 
 
 def initialize_vector_store() -> QdrantVectorStore:
@@ -97,6 +115,8 @@ def initialize_vector_store() -> QdrantVectorStore:
             )
             vector_name = ""
 
+    ensure_namespace_payload_index(client)
+
     embedder = get_embedder()
 
     vector_store = QdrantVectorStore(
@@ -147,8 +167,9 @@ def clear_database():
         return False
 
 
-def delete_by_source(source: str) -> int:
+def delete_by_source(source: str, namespace: str | None = None) -> int:
     """Delete all points in Qdrant that match the given source metadata.
+    When ``namespace`` is set, only points in that knowledge space are removed.
     Returns the number of points deleted."""
     client = get_qdrant_client()
     collection_name = config.QDRANT_COLLECTION_NAME
@@ -158,20 +179,27 @@ def delete_by_source(source: str) -> int:
     except Exception:
         return 0
 
+    must = [
+        rest.FieldCondition(
+            key="metadata.source",
+            match=rest.MatchValue(value=source),
+        )
+    ]
+    if namespace:
+        must.append(
+            rest.FieldCondition(
+                key=NAMESPACE_PAYLOAD_KEY,
+                match=rest.MatchValue(value=namespace),
+            )
+        )
+
     # Scroll through all points matching this source
     point_ids = []
     offset = None
     while True:
         records, next_offset = client.scroll(
             collection_name=collection_name,
-            scroll_filter=rest.Filter(
-                must=[
-                    rest.FieldCondition(
-                        key="metadata.source",
-                        match=rest.MatchValue(value=source),
-                    )
-                ]
-            ),
+            scroll_filter=rest.Filter(must=must),
             limit=100,
             with_payload=False,
             with_vectors=False,
@@ -223,12 +251,15 @@ def ingest_documents(documents: list, vector_store) -> None:
 
     from src.config import config
 
-    # Stamp ingest time on every chunk that lacks it, so listing/sorting by
-    # recency works regardless of ingest path (API already sets it; CLI/dir
-    # ingests did not). setdefault keeps any value the caller already set.
+    # Stamp ingest time and knowledge-space namespace on every chunk that
+    # lacks them. Callers (API) should set namespace from the token scope;
+    # setdefault covers CLI/dir paths with DEFAULT_WRITE_NAMESPACE.
     now_iso = datetime.now(timezone.utc).isoformat()
+    default_ns = (config.DEFAULT_WRITE_NAMESPACE or "").strip()
     for doc in documents:
         doc.metadata.setdefault("ingested_at", now_iso)
+        if default_ns:
+            doc.metadata.setdefault("namespace", default_ns)
 
     client = vector_store.client
     collection_name = config.QDRANT_COLLECTION_NAME

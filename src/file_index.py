@@ -3,6 +3,7 @@ import base64
 from qdrant_client.http import models as rest
 
 from src.config import config
+from src.namespace import build_namespace_filter
 
 
 def encode_source_id(source: str) -> str:
@@ -48,14 +49,20 @@ def _aggregate_sources(records) -> dict:
     return aggregated
 
 
-def list_indexed_sources(vector_store) -> list[dict]:
+def list_indexed_sources(
+    vector_store,
+    read_namespaces: tuple[str, ...] | None = None,
+) -> list[dict]:
+    """List aggregated indexed sources, optionally scoped to read namespaces."""
     client = vector_store.client
     offset = None
     all_records = []
+    scroll_filter = build_namespace_filter(read_namespaces)
 
     while True:
         records, next_offset = client.scroll(
             collection_name=config.QDRANT_COLLECTION_NAME,
+            scroll_filter=scroll_filter,
             limit=256,
             offset=offset,
             with_payload=["metadata"],  # buang page_content (teks chunk); cuma butuh metadata

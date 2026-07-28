@@ -30,6 +30,11 @@ class Config:
 
     # === API Config ===
     API_BEARER_TOKEN = os.getenv("API_BEARER_TOKEN", "")
+    # JSON map token → {write, read[]}. Legacy API_BEARER_TOKEN keeps full access.
+    # Example: {"ppid-token":{"write":"ppid","read":["ppid","tabalong-umum"]}}
+    API_TOKEN_SCOPES_RAW = os.getenv("API_TOKEN_SCOPES", "")
+    # Stamped on ingest when the caller has no write scope (legacy token).
+    DEFAULT_WRITE_NAMESPACE = os.getenv("DEFAULT_WRITE_NAMESPACE", "tabalong-umum")
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
     try:
         API_PORT = int(os.getenv("API_PORT", "8000"))

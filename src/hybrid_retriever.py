@@ -8,6 +8,7 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from qdrant_client.http import models as rest
 from src.config import config
+from src.namespace import build_namespace_filter
 from src.sparse_encoder import encode_sparse
 from src.reranker import rerank, is_reranker_enabled
 
@@ -21,6 +22,9 @@ class HybridRetriever(BaseRetriever):
     vector_store: object  # QdrantVectorStore
     score_threshold: float = 0.7
     k: int = 4
+    # None = full access (legacy). Tuple of namespaces = filter applied to
+    # BOTH prefetches and the top-level query so the RRF pool is never tainted.
+    read_namespaces: tuple[str, ...] | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -37,6 +41,7 @@ class HybridRetriever(BaseRetriever):
 
             client = self.vector_store.client
             collection_name = config.QDRANT_COLLECTION_NAME
+            ns_filter = build_namespace_filter(self.read_namespaces)
 
             # Check if collection has sparse vectors configured
             collection_info = client.get_collection(collection_name)
@@ -48,31 +53,43 @@ class HybridRetriever(BaseRetriever):
             dense_using = getattr(self.vector_store, "vector_name", "dense") or None
 
             if has_sparse:
-                # True hybrid: use prefetch with both dense and sparse
-                dense_prefetch = rest.Prefetch(query=query_vector, limit=self.k * 3)
+                # True hybrid: use prefetch with both dense and sparse.
+                # Namespace filter MUST sit on each prefetch — putting it only
+                # on the top-level FusionQuery lets foreign-space hits enter
+                # the RRF pool before filtering.
+                dense_kwargs: dict = {
+                    "query": query_vector,
+                    "limit": self.k * 3,
+                }
                 if dense_using:
-                    dense_prefetch = rest.Prefetch(
-                        query=query_vector,
-                        using=dense_using,
-                        limit=self.k * 3,
-                    )
+                    dense_kwargs["using"] = dense_using
+                if ns_filter is not None:
+                    dense_kwargs["filter"] = ns_filter
 
-                results = client.query_points(
-                    collection_name=collection_name,
-                    prefetch=[
-                        dense_prefetch,
-                        rest.Prefetch(
-                            query=rest.SparseVector(
-                                indices=sparse_vector["indices"],
-                                values=sparse_vector["values"],
-                            ),
-                            using="sparse",
-                            limit=self.k * 3,
-                        ),
+                sparse_kwargs: dict = {
+                    "query": rest.SparseVector(
+                        indices=sparse_vector["indices"],
+                        values=sparse_vector["values"],
+                    ),
+                    "using": "sparse",
+                    "limit": self.k * 3,
+                }
+                if ns_filter is not None:
+                    sparse_kwargs["filter"] = ns_filter
+
+                query_kwargs: dict = {
+                    "collection_name": collection_name,
+                    "prefetch": [
+                        rest.Prefetch(**dense_kwargs),
+                        rest.Prefetch(**sparse_kwargs),
                     ],
-                    query=rest.FusionQuery(fusion=rest.Fusion.RRF),
-                    limit=self.k * 2,
-                )
+                    "query": rest.FusionQuery(fusion=rest.Fusion.RRF),
+                    "limit": self.k * 2,
+                }
+                if ns_filter is not None:
+                    query_kwargs["query_filter"] = ns_filter
+
+                results = client.query_points(**query_kwargs)
                 logger.info(
                     f"Hybrid search (dense+sparse): {len(results.points)} results"
                 )
@@ -81,11 +98,14 @@ class HybridRetriever(BaseRetriever):
                 logger.info(
                     "No sparse vectors configured, using dense search with BM25 re-scoring"
                 )
-                results = client.query_points(
-                    collection_name=collection_name,
-                    query=query_vector,
-                    limit=self.k * 2,
-                )
+                dense_query_kwargs: dict = {
+                    "collection_name": collection_name,
+                    "query": query_vector,
+                    "limit": self.k * 2,
+                }
+                if ns_filter is not None:
+                    dense_query_kwargs["query_filter"] = ns_filter
+                results = client.query_points(**dense_query_kwargs)
 
             # Convert to LangChain documents
             documents = []
@@ -137,11 +157,15 @@ class HybridRetriever(BaseRetriever):
         except Exception as e:
             logger.error(f"Hybrid search failed, falling back to dense: {e}")
             # Fallback to standard dense retriever
+            search_kwargs = {
+                "score_threshold": self.score_threshold,
+                "k": self.k,
+            }
+            ns_filter = build_namespace_filter(self.read_namespaces)
+            if ns_filter is not None:
+                search_kwargs["filter"] = ns_filter
             retriever = self.vector_store.as_retriever(
                 search_type="similarity_score_threshold",
-                search_kwargs={
-                    "score_threshold": self.score_threshold,
-                    "k": self.k,
-                },
+                search_kwargs=search_kwargs,
             )
             return retriever.invoke(query)

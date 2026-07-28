@@ -75,7 +75,7 @@ def test_ingest_uploads_creates_folder_and_returns_success(monkeypatch, tmp_path
     api = _load_api()
     client = TestClient(api.app)
     monkeypatch.setattr(api.config, "UPLOADS_DIR", str(tmp_path / "uploads"))
-    monkeypatch.setattr(api, "_run_ingest_path", lambda path: (0, 0, 0))
+    monkeypatch.setattr(api, "_run_ingest_path", lambda path, client=None: (0, 0, 0))
 
     resp = client.post("/api/v1/ingest/uploads", headers=_auth_header())
     assert resp.status_code == 200
@@ -89,7 +89,7 @@ def test_files_list_returns_items(monkeypatch):
     monkeypatch.setattr(
         api,
         "list_indexed_sources",
-        lambda _vs: [
+        lambda _vs, read_namespaces=None: [
             {
                 "source_id": "abc",
                 "source": "/tmp/a.txt",
@@ -112,7 +112,7 @@ def test_files_delete_by_source_id(monkeypatch):
     client = TestClient(api.app)
     source = "/tmp/a.txt"
     source_id = base64.urlsafe_b64encode(source.encode()).decode().rstrip("=")
-    monkeypatch.setattr(api, "delete_by_source", lambda _source: 4)
+    monkeypatch.setattr(api, "delete_by_source", lambda _source, namespace=None: 4)
 
     resp = client.delete(f"/api/v1/files/{source_id}", headers=_auth_header())
     assert resp.status_code == 200
@@ -123,19 +123,21 @@ def test_reingest_all_sources_success(monkeypatch):
     api = _load_api()
     client = TestClient(api.app)
 
-    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
-    monkeypatch.setattr(
-        api,
-        "list_indexed_sources",
-        lambda _vs: [
+    seen = {"read_namespaces": "unset"}
+
+    def _fake_list(_vs, read_namespaces=None):
+        seen["read_namespaces"] = read_namespaces
+        return [
             {"source": "https://a.test", "source_id": "1"},
             {"source": "/tmp/a.txt", "source_id": "2"},
-        ],
-    )
+        ]
+
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
+    monkeypatch.setattr(api, "list_indexed_sources", _fake_list)
 
     calls = {"count": 0}
 
-    def _fake_reingest(source):
+    def _fake_reingest(source, client=None):
         calls["count"] += 1
         if source.startswith("https://"):
             return api.OperationResponse(
@@ -161,6 +163,8 @@ def test_reingest_all_sources_success(monkeypatch):
     assert body["deleted_chunks"] == 4
     assert body["added_chunks"] == 6
     assert calls["count"] == 2
+    # Legacy full-access token → None (unscoped); scoped tokens pass a tuple.
+    assert "read_namespaces" in seen and seen["read_namespaces"] != "unset"
 
 
 def test_reingest_all_sources_partial_failure(monkeypatch):
@@ -171,13 +175,13 @@ def test_reingest_all_sources_partial_failure(monkeypatch):
     monkeypatch.setattr(
         api,
         "list_indexed_sources",
-        lambda _vs: [
+        lambda _vs, read_namespaces=None: [
             {"source": "https://ok.test", "source_id": "1"},
             {"source": "/tmp/missing.txt", "source_id": "2"},
         ],
     )
 
-    def _fake_reingest(source):
+    def _fake_reingest(source, client=None):
         if source.endswith("missing.txt"):
             raise api.HTTPException(status_code=404, detail="local source file not found")
         return api.OperationResponse(
@@ -268,7 +272,7 @@ def test_uploads_list_returns_paginated_items_and_ingest_status(monkeypatch, tmp
     monkeypatch.setattr(
         api,
         "list_indexed_sources",
-        lambda _vs: [
+        lambda _vs, read_namespaces=None: [
             {
                 "source_id": "src1",
                 "source": str(ingested_file),
@@ -304,7 +308,7 @@ def test_delete_upload_removes_file_and_vectors(monkeypatch, tmp_path):
     monkeypatch.setattr(api.config, "UPLOADS_DIR", str(uploads_dir))
     calls = {"source": None}
 
-    def _delete_by_source(source: str):
+    def _delete_by_source(source: str, namespace=None):
         calls["source"] = source
         return 7
 
@@ -475,3 +479,111 @@ def test_reset_unknown_session_is_still_ok():
     resp = client.delete("/api/v1/chat/nope", headers=_auth_header())
     assert resp.status_code == 200
     assert resp.json()["success"] is True
+
+
+def test_retrieve_requires_auth():
+    api = _load_api()
+    client = TestClient(api.app)
+    resp = client.post("/api/v1/retrieve", json={"question": "apa itu?"})
+    assert resp.status_code == 401
+
+
+def test_retrieve_returns_chunks(monkeypatch):
+    from langchain_core.documents import Document
+
+    api = _load_api()
+    client = TestClient(api.app)
+    monkeypatch.setattr(api, "_get_or_create_vector_store", lambda: object())
+
+    def _fake_retrieve(question, vector_store, read_namespaces=None):
+        return [
+            Document(
+                page_content="Anggaran belanja Rp 1.000",
+                metadata={
+                    "source": "/uploads/apbd.pdf",
+                    "source_type": "local",
+                    "page": 12,
+                    "heading_path": ["BAB II"],
+                    "namespace": "ppid",
+                    "score": 0.91,
+                    "chunk_kind": "paragraph",
+                },
+            )
+        ]
+
+    monkeypatch.setattr(api, "retrieve_documents", _fake_retrieve)
+    resp = client.post(
+        "/api/v1/retrieve",
+        headers=_auth_header(),
+        json={"question": "berapa anggaran?"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["chunks"]) == 1
+    assert body["chunks"][0]["page"] == 12
+    assert body["chunks"][0]["namespace"] == "ppid"
+    assert body["sources"]
+
+
+def test_ingest_url_requires_auth():
+    api = _load_api()
+    client = TestClient(api.app)
+    resp = client.post(
+        "/api/v1/ingest/url",
+        json={"url": "https://example.com/doc.pdf"},
+    )
+    assert resp.status_code == 401
+
+
+def test_ingest_url_rejects_non_http_scheme():
+    api = _load_api()
+    client = TestClient(api.app)
+    resp = client.post(
+        "/api/v1/ingest/url",
+        headers=_auth_header(),
+        json={"url": "file:///etc/passwd"},
+    )
+    assert resp.status_code == 400
+    assert "http/https" in resp.json()["detail"].lower()
+
+
+def test_ingest_url_happy_path(monkeypatch, tmp_path):
+    api = _load_api()
+    client = TestClient(api.app)
+
+    def _fake_download(url: str):
+        assert url.startswith("https://")
+        path = tmp_path / "downloaded.pdf"
+        path.write_bytes(b"%PDF-1.4 content")
+        return str(path), "downloaded.pdf"
+
+    captured = {}
+
+    def _fake_ingest(filepath, source_type="local", client=None, source=None):
+        captured["filepath"] = filepath
+        captured["source_type"] = source_type
+        captured["source"] = source
+        captured["client"] = client
+        return 2, 5
+
+    monkeypatch.setattr(api, "_download_remote_file", _fake_download)
+    monkeypatch.setattr(api, "_ingest_single_file", _fake_ingest)
+
+    resp = client.post(
+        "/api/v1/ingest/url",
+        headers=_auth_header(),
+        json={
+            "url": "https://minio.local/bucket/doc.pdf?X-Amz-Signature=abc",
+            "source": "ppid:document:52",
+            "source_type": "ppid_document",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert body["deleted_chunks"] == 2
+    assert body["added_chunks"] == 5
+    assert captured["source"] == "ppid:document:52"
+    assert captured["source_type"] == "ppid_document"
+    # Temp download cleaned up after ingest.
+    assert not (tmp_path / "downloaded.pdf").exists()

@@ -19,8 +19,10 @@ from __future__ import annotations
 
 import logging
 import re
+import tempfile
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 from re import Pattern
 from typing import Literal
 
@@ -29,7 +31,16 @@ from docx import Document as DocxDocument
 from docx.oxml.ns import qn
 from langchain_core.documents import Document
 
+from src.ocr_client import ocr_enabled, ocr_file_bytes
+from src.pdf_split import extract_page_range_pdf, iter_page_ranges
+
 logger = logging.getLogger(__name__)
+
+# Scan-like detection: pages below this char count are "sparse"; a doc is
+# scan-like when avg chars/page is below the threshold OR a majority of pages
+# are sparse. Matches MIN_CHUNK_CHARS ballpark so boilerplate alone ≠ content.
+_SPARSE_PAGE_CHARS = 40
+_OCR_MAX_PAGES = 500
 
 
 # ---------------------------------------------------------------------------
@@ -281,14 +292,24 @@ def parse_pdf(filepath: str) -> list[Element]:
 
     Heading detection is hybrid: Indonesian regex first, then font-size
     ratio against the document's dominant body font size.
+
+    When the document looks scan-like (little/no native text) and an OCR
+    gateway is configured, sparse page ranges are OCR'd in chunks of at most
+    500 pages. Native text on pages that already have good content is kept;
+    OCR is best-effort and never raises.
     """
     elements: list[Element] = []
+    page_texts: list[str] = []
+    total_pages = 0
+
     with pdfplumber.open(filepath) as pdf:
+        total_pages = len(pdf.pages)
         body_font_size = _detect_body_font_size(pdf)
 
         for page_idx, page in enumerate(pdf.pages, start=1):
             tables = page.extract_tables() or []
             text = page.extract_text() or ""
+            page_texts.append(text)
 
             line_font_sizes = _line_font_sizes(page)
 
@@ -347,6 +368,140 @@ def parse_pdf(filepath: str) -> list[Element]:
                         )
                     )
 
+    if total_pages > 0 and ocr_enabled() and _is_scan_like(page_texts):
+        good_pages = {
+            idx
+            for idx, text in enumerate(page_texts, start=1)
+            if len(text.strip()) >= _SPARSE_PAGE_CHARS
+        }
+        # Prefer native text on pages that already extract well.
+        elements = [el for el in elements if el.page in good_pages]
+        ocr_elements = _ocr_pdf_page_ranges(
+            filepath, total_pages, skip_pages=good_pages
+        )
+        if ocr_elements:
+            elements.extend(ocr_elements)
+            elements.sort(
+                key=lambda el: (el.page or 0, 0 if el.kind == "heading" else 1)
+            )
+
+    return elements
+
+
+def _is_scan_like(page_texts: list[str]) -> bool:
+    """True when native text is sparse enough that OCR may help."""
+    if not page_texts:
+        return True
+    total_chars = sum(len(t.strip()) for t in page_texts)
+    avg_chars = total_chars / len(page_texts)
+    sparse_count = sum(
+        1 for t in page_texts if len(t.strip()) < _SPARSE_PAGE_CHARS
+    )
+    return (
+        avg_chars < _SPARSE_PAGE_CHARS
+        or sparse_count > len(page_texts) / 2
+    )
+
+
+def _ocr_pdf_page_ranges(
+    filepath: str,
+    total_pages: int,
+    skip_pages: set[int] | None = None,
+) -> list[Element]:
+    """OCR a PDF in ≤500-page ranges; skip pages that already have good text.
+
+    Best-effort: any failure for a range yields no elements for that range.
+    """
+    skip = skip_pages or set()
+    # If every page already has good native text, nothing to OCR.
+    if skip and len(skip) >= total_pages:
+        return []
+
+    elements: list[Element] = []
+    stem = Path(filepath).stem
+
+    for start, end in iter_page_ranges(total_pages, max_pages=_OCR_MAX_PAGES):
+        range_pages = set(range(start, end + 1))
+        if range_pages and range_pages.issubset(skip):
+            continue
+        try:
+            range_elements = _ocr_one_page_range(filepath, start, end, stem)
+        except Exception as exc:  # never crash ingest on OCR/split errors
+            logger.warning(
+                "OCR page range %s-%s failed for %s: %s",
+                start,
+                end,
+                filepath,
+                exc,
+            )
+            continue
+        for el in range_elements:
+            if el.page is not None and el.page in skip:
+                continue
+            elements.append(el)
+    return elements
+
+
+def _ocr_one_page_range(
+    filepath: str, start: int, end: int, stem: str
+) -> list[Element]:
+    """Extract a page-range subset, OCR it, convert text to Elements."""
+    with tempfile.TemporaryDirectory(prefix="rag-ocr-") as tmp:
+        dest = Path(tmp) / f"{stem}_p{start}-{end}.pdf"
+        extract_page_range_pdf(filepath, start, end, dest)
+        data = dest.read_bytes()
+        if not data:
+            return []
+        text = ocr_file_bytes(data, dest.name)
+    return _ocr_text_to_elements(text, start, end)
+
+
+def _ocr_text_to_elements(text: str, start: int, end: int) -> list[Element]:
+    """Turn OCR full_text into paragraph Elements with approximate page numbers.
+
+    Prefers form-feed (``\\f``) page breaks when present; otherwise distributes
+    blank-line paragraphs evenly across ``[start, end]``.
+    """
+    if not text or not text.strip():
+        return []
+
+    n_pages = end - start + 1
+    elements: list[Element] = []
+
+    if "\f" in text:
+        page_blocks = text.split("\f")
+        for offset, block in enumerate(page_blocks):
+            page_num = start + offset if offset < n_pages else end
+            for paragraph in _split_paragraphs(block):
+                elements.append(
+                    Element(
+                        kind="paragraph",
+                        level=0,
+                        text=paragraph.strip(),
+                        page=page_num,
+                    )
+                )
+        return elements
+
+    paragraphs = _split_paragraphs(text)
+    if not paragraphs:
+        return []
+    if n_pages <= 1:
+        return [
+            Element(kind="paragraph", level=0, text=p.strip(), page=start)
+            for p in paragraphs
+        ]
+
+    for idx, paragraph in enumerate(paragraphs):
+        page_num = start + min(idx * n_pages // len(paragraphs), n_pages - 1)
+        elements.append(
+            Element(
+                kind="paragraph",
+                level=0,
+                text=paragraph.strip(),
+                page=page_num,
+            )
+        )
     return elements
 
 

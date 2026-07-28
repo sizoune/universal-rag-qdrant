@@ -21,8 +21,11 @@ def ocr_enabled() -> bool:
     return bool(config.OCR_GATEWAY_URL)
 
 
-def ocr_image_bytes(data: bytes, filename: str) -> str:
-    """OCR raw image bytes via the configured gateway. Returns "" on any failure."""
+def ocr_file_bytes(data: bytes, filename: str) -> str:
+    """OCR raw file bytes (PDF/image) via the configured gateway.
+
+    Returns "" on any failure.
+    """
     if not config.OCR_GATEWAY_URL:
         return ""
     headers = {}
@@ -44,3 +47,8 @@ def ocr_image_bytes(data: bytes, filename: str) -> str:
     except Exception as exc:  # network, timeout, non-2xx, bad JSON — all best-effort
         logger.warning("OCR failed for %s: %s", filename, exc)
         return ""
+
+
+def ocr_image_bytes(data: bytes, filename: str) -> str:
+    """OCR raw image bytes via the configured gateway. Returns "" on any failure."""
+    return ocr_file_bytes(data, filename)

@@ -15,8 +15,32 @@ class ChatRequest(BaseModel):
     )
 
 
+class RetrieveRequest(BaseModel):
+    question: str = Field(..., description="User question to retrieve against")
+    top_k: int | None = Field(
+        default=None,
+        ge=1,
+        le=20,
+        description="Override MAX_SEARCH_RESULTS for this request",
+    )
+
+
 class IngestWebRequest(BaseModel):
     url: str
+
+
+class IngestUrlRequest(BaseModel):
+    """Ingest a remote file (e.g. presigned S3 URL) into the caller's namespace."""
+
+    url: str
+    source: str | None = Field(
+        default=None,
+        description="Stable source id stamped on chunks; defaults to the URL",
+    )
+    source_type: str | None = Field(
+        default="remote",
+        description="source_type metadata (e.g. remote, ppid_document)",
+    )
 
 
 class IngestPathRequest(BaseModel):
@@ -72,6 +96,25 @@ class ChatResponse(BaseModel):
     token_usage: TokenUsage
     elapsed_ms: int | None = None
     web_search_used: bool = False
+
+
+class RetrievedChunk(BaseModel):
+    text: str
+    source: str
+    source_type: str = "local"
+    filename: str | None = None
+    page: int | None = None
+    heading_path: list[str] | None = None
+    chunk_kind: str | None = None
+    namespace: str | None = None
+    score: float | None = None
+    display: str | None = None
+
+
+class RetrieveResponse(BaseModel):
+    chunks: list[RetrievedChunk]
+    sources: list[SourceItem]
+    elapsed_ms: int | None = None
 
 
 class FileItem(BaseModel):
