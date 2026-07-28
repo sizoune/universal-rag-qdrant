@@ -136,11 +136,22 @@ Pemisahan `rag-api` vs `rag-api-ingest` memakai image dan Qdrant yang sama. Tuju
 - baca → `:13121`
 - tulis/reconcile → `:13123`
 
+### Embedder terpisah (retrieve lokal vs ingest GPU)
+
+Agar Tanya Dokumen tetap hidup saat Ollama GPU (mark-7) down:
+
+| Service | Env | Contoh |
+|---------|-----|--------|
+| `rag-api` (retrieve) | `EMBEDDER_BASE_URL` di `.env` | `http://10.91.101.32:11434` (Ollama di host eoffice-db) |
+| `rag-api-ingest` | `INGEST_EMBEDDER_BASE_URL` (override di compose) | `http://100.76.102.104:11434` (mark-7 Tailscale) |
+
+`docker-compose.yml` memaksa `rag-api-ingest.environment.EMBEDDER_BASE_URL=${INGEST_EMBEDDER_BASE_URL:-http://100.76.102.104:11434}` sehingga redeploy tidak menyamakan keduanya ke satu URL. Model harus sama (`bge-m3:latest`, dimensi 1024) di kedua host.
+
 Tips:
 - Pastikan `.env` terisi sebelum `docker compose up`
 - `QDRANT_URL` untuk bot/API di dalam Docker harus mengarah ke service `qdrant` (bukan localhost host)
 - Jangan hapus volume `qdrant_storage` saat recreate service
-- Ollama embedding tetap di-share; query bisa sedikit lebih lambat saat ingest, tetapi tidak lagi hang di proses API yang sama
+- Retrieve memakai Ollama lokal; ingest memakai GPU — query tidak bergantung pada mark-7
 
 ## 7. Verification Checklist
 

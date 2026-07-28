@@ -258,7 +258,7 @@ Service default:
 - `qdrant` (internal; shared by all API instances)
 - `rag-bot` (menjalankan `python main.py gateway`)
 - `rag-api` — retrieve / chat / status (host `13121` → container `8000`)
-- `rag-api-ingest` — ingest / file writes (host `13123` → container `8000`)
+- `rag-api-ingest` — ingest / file writes (host `13123` → container `8000`); embedder via `INGEST_EMBEDDER_BASE_URL` (GPU/mark-7), while `rag-api` uses `EMBEDDER_BASE_URL` from `.env` (prefer local Ollama)
 
 Routing yang disarankan saat indexing berat (mis. n8n reconcile) berjalan bersamaan dengan Q&A:
 - Klien baca (PPID Tanya Dokumen, UI chat): `http://<host>:13121`
