@@ -42,8 +42,7 @@ services:
       - rag_uploads:/app/uploads
 
   # Heavy ingest / file writes — point n8n reconcile here so retrieve stays responsive.
-  # EMBEDDER_BASE_URL is overridden via INGEST_EMBEDDER_BASE_URL (GPU Ollama / mark-7).
-  # If unset, defaults to mark-7 Tailscale; set INGEST_EMBEDDER_BASE_URL in .env to change.
+  # EMBEDDER_BASE_URL → GPU/mark-7; EMBEDDER_FALLBACK_BASE_URL → local Ollama if GPU down.
   rag-api-ingest:
     build:
       context: .
@@ -57,6 +56,8 @@ services:
       API_HOST: "0.0.0.0"
       API_PORT: "8000"
       EMBEDDER_BASE_URL: ${INGEST_EMBEDDER_BASE_URL:-http://100.76.102.104:11434}
+      # Local Ollama when mark-7 is unreachable. Prefer setting this in .env.
+      EMBEDDER_FALLBACK_BASE_URL: ${EMBEDDER_FALLBACK_BASE_URL:-http://10.91.101.32:11434}
     command: ["python", "-m", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - qdrant

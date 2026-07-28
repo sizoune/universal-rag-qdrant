@@ -13,6 +13,18 @@ class Config:
         EMBEDDER_DIMENSION = int(os.getenv("EMBEDDER_DIMENSION", "1024"))
     except ValueError:
         EMBEDDER_DIMENSION = 1024
+    # Optional second host when primary is unreachable (e.g. mark-7 → local Ollama).
+    # Must serve the same EMBEDDER_MODEL / dimension. Empty = disabled.
+    EMBEDDER_FALLBACK_BASE_URL = os.getenv("EMBEDDER_FALLBACK_BASE_URL", "").strip()
+    EMBEDDER_FALLBACK_API_KEY = os.getenv("EMBEDDER_FALLBACK_API_KEY", "").strip()
+    try:
+        # After a primary transport failure, keep using fallback this many seconds
+        # before retrying primary. 0 = sticky until process restart.
+        EMBEDDER_FALLBACK_RETRY_SECONDS = int(
+            os.getenv("EMBEDDER_FALLBACK_RETRY_SECONDS", "300")
+        )
+    except ValueError:
+        EMBEDDER_FALLBACK_RETRY_SECONDS = 300
 
     # === Qdrant Config ===
     QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")

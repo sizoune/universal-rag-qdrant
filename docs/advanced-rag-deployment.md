@@ -147,6 +147,10 @@ Agar Tanya Dokumen tetap hidup saat Ollama GPU (mark-7) down:
 
 `docker-compose.yml` memaksa `rag-api-ingest.environment.EMBEDDER_BASE_URL=${INGEST_EMBEDDER_BASE_URL:-http://100.76.102.104:11434}` sehingga redeploy tidak menyamakan keduanya ke satu URL. Model harus sama (`bge-m3:latest`, dimensi 1024) di kedua host.
 
+### Fallback saat mark-7 down
+
+Set `EMBEDDER_FALLBACK_BASE_URL` (biasanya Ollama lokal yang sama dengan retrieve). Jika primary gagal koneksi/timeout, `FallbackEmbeddings` pindah ke fallback selama `EMBEDDER_FALLBACK_RETRY_SECONDS` (default 300), lalu mencoba primary lagi. Compose ingest mengisi fallback dari `.env` (`EMBEDDER_FALLBACK_BASE_URL` atau `EMBEDDER_BASE_URL` lokal).
+
 Tips:
 - Pastikan `.env` terisi sebelum `docker compose up`
 - `QDRANT_URL` untuk bot/API di dalam Docker harus mengarah ke service `qdrant` (bukan localhost host)
