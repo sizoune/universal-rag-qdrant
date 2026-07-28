@@ -41,6 +41,7 @@ services:
       - rag_uploads:/app/uploads
 
   # Heavy ingest / file writes — point n8n reconcile here so retrieve stays responsive.
+  # Optionally override EMBEDDER_* here for a GPU Ollama host; rag-api keeps .env for retrieve.
   rag-api-ingest:
     build:
       context: .
