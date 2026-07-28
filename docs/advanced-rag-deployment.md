@@ -127,12 +127,20 @@ docker compose up --build
 ```
 
 Service:
-- `qdrant` di `http://localhost:6333`
+- `qdrant` (internal `http://qdrant:6333`, volume `qdrant_storage`)
 - `rag-bot` menjalankan `python main.py gateway`
+- `rag-api` — retrieve/chat (host port **13121**)
+- `rag-api-ingest` — ingest/file writes (host port **13123**)
+
+Pemisahan `rag-api` vs `rag-api-ingest` memakai image dan Qdrant yang sama. Tujuannya agar HTTP retrieve (PPID Tanya Dokumen) tidak diblokir saat batch `POST /api/v1/ingest/url` berjalan. Arahkan:
+- baca → `:13121`
+- tulis/reconcile → `:13123`
 
 Tips:
 - Pastikan `.env` terisi sebelum `docker compose up`
-- `QDRANT_URL` untuk bot di dalam Docker harus mengarah ke service `qdrant` (bukan localhost host)
+- `QDRANT_URL` untuk bot/API di dalam Docker harus mengarah ke service `qdrant` (bukan localhost host)
+- Jangan hapus volume `qdrant_storage` saat recreate service
+- Ollama embedding tetap di-share; query bisa sedikit lebih lambat saat ingest, tetapi tidak lagi hang di proses API yang sama
 
 ## 7. Verification Checklist
 

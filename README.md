@@ -255,9 +255,16 @@ docker compose up --build
 ```
 
 Service default:
-- `qdrant` (port 6333)
+- `qdrant` (internal; shared by all API instances)
 - `rag-bot` (menjalankan `python main.py gateway`)
-- `rag-api` (menjalankan `uvicorn api:app` di port 8000, docs: `http://localhost:8000/docs`)
+- `rag-api` — retrieve / chat / status (host `13121` → container `8000`)
+- `rag-api-ingest` — ingest / file writes (host `13123` → container `8000`)
+
+Routing yang disarankan saat indexing berat (mis. n8n reconcile) berjalan bersamaan dengan Q&A:
+- Klien baca (PPID Tanya Dokumen, UI chat): `http://<host>:13121`
+- Klien tulis (n8n ingest, admin reindex): `http://<host>:13123`
+
+Keduanya memakai Qdrant + volume cache/uploads yang sama, jadi indeks tetap satu; proses HTTP-nya terpisah agar retrieve tidak timeout saat ingest.
 
 ## Testing
 

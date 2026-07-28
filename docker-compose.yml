@@ -19,6 +19,7 @@ services:
     volumes:
       - rag_cache:/app/.cache
 
+  # Retrieve / chat / status — keep PPID and public Traefik on this port.
   rag-api:
     build:
       context: .
@@ -27,6 +28,27 @@ services:
       - .env
     ports:
       - "13121:8000"
+    environment:
+      QDRANT_URL: "http://qdrant:6333"
+      API_HOST: "0.0.0.0"
+      API_PORT: "8000"
+    command: ["python", "-m", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      - qdrant
+    restart: always
+    volumes:
+      - rag_cache:/app/.cache
+      - rag_uploads:/app/uploads
+
+  # Heavy ingest / file writes — point n8n reconcile here so retrieve stays responsive.
+  rag-api-ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "13123:8000"
     environment:
       QDRANT_URL: "http://qdrant:6333"
       API_HOST: "0.0.0.0"
