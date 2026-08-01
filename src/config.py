@@ -87,12 +87,18 @@ class Config:
         # Chunks shorter than this (after stripping) are treated as boilerplate
         # and dropped at ingest. Real content chunks run ~500+ chars here.
         MIN_CHUNK_CHARS = int(os.getenv("MIN_CHUNK_CHARS", "40"))
+        # Cache aggregated /files listing (seconds). 0 = disable. Prevents n8n
+        # pagination from full-scrolling Qdrant on every page request.
+        SOURCES_LIST_CACHE_TTL_SECONDS = int(
+            os.getenv("SOURCES_LIST_CACHE_TTL_SECONDS", "120")
+        )
     except ValueError:
         SEARCH_SCORE_THRESHOLD = 0.7
         MAX_SEARCH_RESULTS = 4
         EMBEDDING_BATCH_SIZE = 100
         MAX_BATCH_SCANNER_RETRIES = 3
         MIN_CHUNK_CHARS = 40
+        SOURCES_LIST_CACHE_TTL_SECONDS = 120
 
     # === Hybrid Search & Re-ranking ===
     SEARCH_MODE = os.getenv("SEARCH_MODE", "dense")  # "dense" or "hybrid"

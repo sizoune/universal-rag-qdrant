@@ -48,8 +48,10 @@ def mock_env_vars():
             import src.config
 
             importlib.reload(src.config)
-            # Reload vector_store so it picks up the reloaded config
+            # Reload modules that capture config at import time
+            import src.file_index
             import src.vector_store
 
+            importlib.reload(src.file_index)
             importlib.reload(src.vector_store)
             yield

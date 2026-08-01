@@ -171,6 +171,8 @@ def delete_by_source(source: str, namespace: str | None = None) -> int:
     """Delete all points in Qdrant that match the given source metadata.
     When ``namespace`` is set, only points in that knowledge space are removed.
     Returns the number of points deleted."""
+    from src.file_index import invalidate_sources_cache
+
     client = get_qdrant_client()
     collection_name = config.QDRANT_COLLECTION_NAME
 
@@ -192,36 +194,30 @@ def delete_by_source(source: str, namespace: str | None = None) -> int:
                 match=rest.MatchValue(value=namespace),
             )
         )
+    scroll_filter = rest.Filter(must=must)
 
-    # Scroll through all points matching this source
-    point_ids = []
-    offset = None
-    while True:
-        records, next_offset = client.scroll(
-            collection_name=collection_name,
-            scroll_filter=rest.Filter(must=must),
-            limit=100,
-            with_payload=False,
-            with_vectors=False,
-            offset=offset,
+    try:
+        deleted = int(
+            client.count(
+                collection_name=collection_name,
+                count_filter=scroll_filter,
+                exact=True,
+            ).count
         )
+    except Exception:
+        deleted = 0
 
-        if not records:
-            break
+    if deleted <= 0:
+        return 0
 
-        point_ids.extend([record.id for record in records])
-        offset = next_offset
-        if offset is None:
-            break
-
-    if point_ids:
-        client.delete(
-            collection_name=collection_name,
-            points_selector=rest.PointIdsList(points=point_ids),
-        )
-        logger.info(f"Deleted {len(point_ids)} old points for source: {source}")
-
-    return len(point_ids)
+    # Filter delete avoids holding thousands of point IDs in Python memory.
+    client.delete(
+        collection_name=collection_name,
+        points_selector=rest.FilterSelector(filter=scroll_filter),
+    )
+    logger.info(f"Deleted {deleted} old points for source: {source}")
+    invalidate_sources_cache()
+    return deleted
 
 
 def ingest_documents(documents: list, vector_store) -> None:
@@ -229,12 +225,16 @@ def ingest_documents(documents: list, vector_store) -> None:
     Custom wrapper to ingest documents into Qdrant.
     It computes dense embeddings (via LangChain) and sparse embeddings (via fastembed)
     then upserts them as named vectors.
+
+    Processing is streamed per EMBEDDING_BATCH_SIZE so large PDFs (thousands of
+    chunks) never hold all dense+sparse vectors and PointStructs in memory at once.
     """
     if not documents:
         return
 
     # Drop boilerplate chunks (footer URLs, "Sumber:" stamps, fragments) before
     # spending embeddings on them. Single choke point — covers file/web/dir.
+    from src.file_index import invalidate_sources_cache
     from src.ingestion import drop_low_value_chunks
 
     before = len(documents)
@@ -283,54 +283,63 @@ def ingest_documents(documents: list, vector_store) -> None:
     sparse_vectors_config = getattr(params, "sparse_vectors", None)
     has_sparse = isinstance(sparse_vectors_config, dict) and "sparse" in sparse_vectors_config
     use_sparse = has_sparse and dense_is_named
-
-    # Compute dense embeddings in batches. A single huge embed_documents() call
-    # can crash some backends — e.g. Ollama's model runner refuses/OOMs when one
-    # request carries hundreds of inputs. EMBEDDING_BATCH_SIZE caps each request.
-    texts = [doc.page_content for doc in documents]
-    logger.info(f"Computing dense embeddings for {len(texts)} chunks...")
-    embed_batch = max(1, config.EMBEDDING_BATCH_SIZE)
-    dense_embeddings = []
-    for i in range(0, len(texts), embed_batch):
-        dense_embeddings.extend(embedder.embed_documents(texts[i : i + embed_batch]))
-
-    sparse_embeddings = None
-    if use_sparse:
-        from src.sparse_encoder import encode_sparse
-
-        logger.info(f"Computing sparse embeddings for {len(texts)} chunks...")
-        sparse_embeddings = encode_sparse(texts)
-    elif has_sparse and not dense_is_named:
+    if has_sparse and not dense_is_named:
         logger.warning(
             "Sparse vector config detected but dense vector is unnamed; ingesting dense only."
         )
 
-    # Build Qdrant points
-    points = []
-    for i, doc in enumerate(documents):
-        point_id = str(uuid.uuid4())
-        payload = {"page_content": doc.page_content, "metadata": doc.metadata}
+    encode_sparse = None
+    if use_sparse:
+        from src.sparse_encoder import encode_sparse as _encode_sparse
 
-        if dense_is_named:
-            vector_payload = {dense_vector_name: dense_embeddings[i]}
-            if use_sparse and sparse_embeddings is not None:
-                sparse_vector = sparse_embeddings[i]
-                vector_payload["sparse"] = rest.SparseVector(
-                    indices=sparse_vector["indices"], values=sparse_vector["values"]
-                )
-        else:
-            vector_payload = dense_embeddings[i]
+        encode_sparse = _encode_sparse
 
-        points.append(rest.PointStruct(id=point_id, payload=payload, vector=vector_payload))
+    # Stream: embed → sparse → upsert per batch. Avoids O(N) peak RAM on large docs.
+    batch_size = max(1, config.EMBEDDING_BATCH_SIZE)
+    total = len(documents)
+    logger.info(
+        "Ingesting %d chunks in batches of %d (%s)...",
+        total,
+        batch_size,
+        "dense+sparse" if use_sparse else "dense only",
+    )
 
-    # Upsert in batches
-    batch_size = config.EMBEDDING_BATCH_SIZE
-    for i in range(0, len(points), batch_size):
-        batch_points = points[i : i + batch_size]
-        client.upsert(collection_name=collection_name, points=batch_points)
+    ingested = 0
+    for start in range(0, total, batch_size):
+        batch_docs = documents[start : start + batch_size]
+        texts = [doc.page_content for doc in batch_docs]
+        dense_embeddings = embedder.embed_documents(texts)
+        sparse_embeddings = encode_sparse(texts) if encode_sparse is not None else None
+
+        points = []
+        for i, doc in enumerate(batch_docs):
+            point_id = str(uuid.uuid4())
+            payload = {"page_content": doc.page_content, "metadata": doc.metadata}
+
+            if dense_is_named:
+                vector_payload = {dense_vector_name: dense_embeddings[i]}
+                if sparse_embeddings is not None:
+                    sparse_vector = sparse_embeddings[i]
+                    vector_payload["sparse"] = rest.SparseVector(
+                        indices=sparse_vector["indices"],
+                        values=sparse_vector["values"],
+                    )
+            else:
+                vector_payload = dense_embeddings[i]
+
+            points.append(
+                rest.PointStruct(id=point_id, payload=payload, vector=vector_payload)
+            )
+
+        client.upsert(collection_name=collection_name, points=points)
+        ingested += len(points)
+
+    invalidate_sources_cache()
     if use_sparse:
         logger.info(
-            f"Successfully ingested {len(points)} points (dense+sparse) to Qdrant."
+            "Successfully ingested %d points (dense+sparse) to Qdrant.", ingested
         )
     else:
-        logger.info(f"Successfully ingested {len(points)} points (dense only) to Qdrant.")
+        logger.info(
+            "Successfully ingested %d points (dense only) to Qdrant.", ingested
+        )

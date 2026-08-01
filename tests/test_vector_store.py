@@ -123,6 +123,7 @@ def test_collection_creation_on_not_found(mock_get_embedder, mock_get_client):
 def test_ingest_documents_batches_dense_embeddings():
     """Dense embeddings must be requested in batches of <= EMBEDDING_BATCH_SIZE.
     A single huge embed_documents() call can crash backends like Ollama's runner.
+    Streaming upsert must also happen per batch (no giant points list).
     """
     from langchain_core.documents import Document
 
@@ -158,4 +159,53 @@ def test_ingest_documents_batches_dense_embeddings():
     assert sum(batch_sizes) == n  # every chunk embedded exactly once
     assert all(b <= config.EMBEDDING_BATCH_SIZE for b in batch_sizes)
     assert len(batch_sizes) == 3  # 100, 100, 5
-    assert client.upsert.called
+    assert client.upsert.call_count == 3
+    upsert_sizes = [len(c.kwargs["points"]) for c in client.upsert.call_args_list]
+    assert upsert_sizes == batch_sizes
+
+
+def test_ingest_documents_batches_sparse_embeddings(monkeypatch):
+    """Hybrid sparse encoding must also be batched — never encode_sparse(all texts)."""
+    from langchain_core.documents import Document
+
+    config = _get_config()
+    from src.vector_store import ingest_documents
+
+    sparse_batch_sizes = []
+
+    def _fake_encode_sparse(texts):
+        sparse_batch_sizes.append(len(texts))
+        return [{"indices": [1], "values": [1.0]} for _ in texts]
+
+    monkeypatch.setattr(
+        "src.sparse_encoder.encode_sparse",
+        _fake_encode_sparse,
+    )
+
+    class _Embedder:
+        def embed_documents(self, texts):
+            return [[0.0] * config.EMBEDDER_DIMENSION for _ in texts]
+
+    client = MagicMock(spec=QdrantClient)
+    params = MagicMock()
+    params.vectors = {"dense": MagicMock(size=config.EMBEDDER_DIMENSION)}
+    params.sparse_vectors = {"sparse": MagicMock()}
+    client.get_collection.return_value.config.params = params
+
+    vector_store = MagicMock()
+    vector_store.client = client
+    vector_store.embeddings = _Embedder()
+
+    n = config.EMBEDDING_BATCH_SIZE + 3
+    docs = [
+        Document(
+            page_content=f"konten chunk yang cukup panjang agar lolos filter, nomor {i}",
+            metadata={"source": "x.pdf"},
+        )
+        for i in range(n)
+    ]
+
+    ingest_documents(docs, vector_store)
+
+    assert sparse_batch_sizes == [config.EMBEDDING_BATCH_SIZE, 3]
+    assert client.upsert.call_count == 2
